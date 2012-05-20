@@ -12,16 +12,16 @@ from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import webapp
 
+import structures
 
 
 
-
-class Locator(webapp.RequestHandler):
+class UploadedResults(webapp.RequestHandler):
 
 
 
 application = webapp.WSGIApplication([
-	('/locate', Locator)
+	('/UploadedResults', UploadedResults)
 ], debug=True)
 
 
