@@ -149,6 +149,15 @@ class UploadedResults(webapp.RequestHandler):
 			pairs[3].Battles += 1
 			user.TotalUploads += 1
 			
+			bots[0].LastUpload = datetime.datetime.now()
+			bots[1].LastUpload = datetime.datetime.now()
+			pairs[0].LastUpload = datetime.datetime.now()
+			pairs[1].LastUpload = datetime.datetime.now()
+			pairs[2].LastUpload = datetime.datetime.now()
+			pairs[3].LastUpload = datetime.datetime.now()
+			user.LastUpload = datetime.datetime.now()
+			
+			
 			try:
 				db.put(pairs)
 				db.put(bots)
