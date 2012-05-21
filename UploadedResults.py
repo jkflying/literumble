@@ -20,7 +20,6 @@ allowed_versions = ["1"]
 
 class UploadedResults(webapp.RequestHandler):
 	def post(self):
-		#post_headers = self.request.headers
 		post_body = self.request.body
 		
 		sections = post_body.split('&')
@@ -66,10 +65,7 @@ class UploadedResults(webapp.RequestHandler):
 				if bots[i] is None:
 					bots[i] = structures.BotEntry(key_name = botHashes[i],
 							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
-							Survival = 0.0, PL = 0, Rumble = rumble, Active = True)		
-					assert bots[i] is not None
-					
-					print bots[i].Pairings		
+							Survival = 0.0, PL = 0, Rumble = rumble, Active = True)			
 						
 			
 			scorea = float(results["fscore"])
@@ -79,9 +75,12 @@ class UploadedResults(webapp.RequestHandler):
 			
 			survivala = float(results["fsurvival"])
 			survivalb = float(results["ssurvival"])
-			survivala = 100*survivala/(survivala+survivalb)
-			survivalb = 100 - survivala
-			
+			if survivala + survivalb > 0.0:
+				survivala = 100.0*survivala/(survivala+survivalb)
+				survivalb = 100.0 - survivala
+			else:
+				survivala = 50.0
+				survivalb = 50.0
 			uploaderBattles = pairs[0].Battles
 			
 			pairs[0].APS*= float(uploaderBattles)/(uploaderBattles + 1)
@@ -93,10 +92,7 @@ class UploadedResults(webapp.RequestHandler):
 			pairs[0].Survival += survivala/(uploaderBattles + 1)
 			
 			pairs[1].Survival = 100 - pairs[0].Survival
-			
-			pairs[0].Battles += 1
-			pairs[1].Battles += 1
-			
+
 			totalBattles = pairs[2].Battles
 			botaPairs = float(bots[0].Pairings)
 			botbPairs = float(bots[1].Pairings)
@@ -141,11 +137,14 @@ class UploadedResults(webapp.RequestHandler):
 				bots[0].APS += pairs[2].APS/botaPairs
 				bots[0].Survival += pairs[2].Survival/botaPairs
 				bots[1].APS += pairs[3].APS/botbPairs
-				bots[0].Survival += pairs[3].Survival/botbPairs
+				bots[1].Survival += pairs[3].Survival/botbPairs
 			
 			
 
-			
+			bots[0].Battles += 1
+			bots[1].Battles += 1
+			pairs[0].Battles += 1
+			pairs[1].Battles += 1
 			pairs[2].Battles += 1
 			pairs[3].Battles += 1
 			user.TotalUploads += 1
