@@ -13,19 +13,32 @@ from google.appengine.api import users
 from google.appengine.ext import webapp
 
 class Pairing(db.Model):
+	#ABRU = db.StringProperty() --> key_name
 	BotA = db.StringProperty()
 	BotB = db.StringProperty()
 	APS = db.FloatProperty()
 	Survival = db.FloatProperty()
 	Battles = db.IntegerProperty()
 	Rumble = db.StringProperty()
+	Uploader = db.StringProperty()
 	
 
-class BotEntry(db.Model)
+class BotEntry(db.Model):
+	#NRU = db.StringProperty() --> key_name
 	Name = db.StringProperty()
 	Battles = db.IntegerProperty()
 	Pairings = db.IntegerProperty()
 	APS = db.FloatProperty()
 	PL = db.IntegerProperty()
 	Rumble = db.StringProperty()
+	Uploader = db.StringProperty()
+	LastUpload = db.DateTimeProperty()
+	Active = db.BooleanProperty()
+
+class Uploader(db.Model):
+	#NV = db.StringProperty() --> key_name
+	Name = db.StringProperty()
+	Version = db.StringProperty()
+	LastUpload = db.DateTimeProperty()
+	TotalUploads = db.IntegerProperty()
 	
