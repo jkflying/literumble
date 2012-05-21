@@ -40,6 +40,30 @@ class UploadedResults(webapp.RequestHandler):
 				Name = uploader, Version = version, TotalUploads = 0)
 			
 			rumble = results["game"]
+			
+			
+			game = structures.Rumble.get_by_key_name(rumble)
+			if game is None:
+				game = structures.Rumble(key_name = rumble,
+				Name = rumble, Rounds = int(results["rounds"]),
+				Field = results["field"], Melee = bool(results["melee"] == "YES"),
+				Teams = bool(results["teams"] == "YES"), TotalUploads = 0)
+				#game.put()
+				self.response.out.write("OK. CREATED NEW GAME TYPE!!")
+				#self.response.out.write(str(bool(results["melee"] == "YES")))
+			else:
+				field = game.Field == results["field"]
+				rounds = (game.Rounds == int(results["rounds"]))
+				teams = game.Teams == bool(results["teams"] == "YES")
+				melee = game.Melee == bool(results["melee"] == "YES")
+				allowed = field and rounds and teams and melee
+				if not allowed:
+					self.response.out.write("OK. ERROR. YOUR RUMBLE CONFIG DOES NOT MATCH RUMBLE NAME!!!")
+					#self.response.out.write(str(field) + str(rounds) + str(teams) + str(melee))
+					return
+				
+			
+			
 			bota = results["fname"]
 			botb = results["sname"]
 			pd =   [[bota , botb ,rumble , uploader], 
@@ -148,6 +172,7 @@ class UploadedResults(webapp.RequestHandler):
 			pairs[2].Battles += 1
 			pairs[3].Battles += 1
 			user.TotalUploads += 1
+			game.TotalUploads += 1
 			
 			bots[0].LastUpload = datetime.datetime.now()
 			bots[1].LastUpload = datetime.datetime.now()
@@ -162,6 +187,7 @@ class UploadedResults(webapp.RequestHandler):
 				db.put(pairs)
 				db.put(bots)
 				db.put(user)
+				db.put(game)
 			except:
 				self.response.out.write("ERROR PUTTING PAIRS DATA \r\n")
 			
