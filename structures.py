@@ -27,7 +27,7 @@ class Pairing(db.Model):
 	
 
 class BotEntry(db.Model):
-	#NRU = db.StringProperty() --> key_name
+	#NR = db.StringProperty() --> key_name
 	Name = db.StringProperty()
 	Battles = db.IntegerProperty()
 	Pairings = db.IntegerProperty()
