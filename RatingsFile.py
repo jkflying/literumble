@@ -26,7 +26,7 @@ class RatingsFile(webapp.RequestHandler):
 				requests[ab[0]] = ab[1]
 			
 		
-		if "version" not in requests or requests["version"] is not "1":
+		if "version" not in requests or requests["version"] != "1":
 			return
 			
 		game = requests.get("game",None)
