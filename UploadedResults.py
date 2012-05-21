@@ -17,7 +17,16 @@ import structures
 
 
 class UploadedResults(webapp.RequestHandler):
-
+	def post(self):
+		post_headers = self.request.headers
+		post_body = self.request.body
+		out_str = "headers: \n"
+		for key,value in post_headers:
+			out_str += "key: " + key + "   value:" + value + "\n"
+		out_str += "\nbody:"
+		out_str += post_body
+		print out_str
+		self.response.out.write(out_str)
 
 
 application = webapp.WSGIApplication([
