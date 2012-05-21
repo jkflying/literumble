@@ -39,9 +39,9 @@ class BotEntry(db.Model):
 	Active = db.BooleanProperty()
 
 class Uploader(db.Model):
-	#NV = db.StringProperty() --> key_name
+	#NC = db.StringProperty() --> key_name
 	Name = db.StringProperty()
-	Version = db.StringProperty()
+	Client = db.StringProperty()
 	LastUpload = db.DateTimeProperty()
 	TotalUploads = db.IntegerProperty()
 	
