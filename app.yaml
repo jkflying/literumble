@@ -9,3 +9,9 @@ handlers:
 
 - url: .Rankings
   script: Rankings.py
+  
+- url: .RatingsFile
+  script: RatingsFile.py
+  
+- url: .RemoveOldParticipant
+  script: RemoveOldParticipant.py
