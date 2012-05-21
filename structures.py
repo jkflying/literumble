@@ -46,8 +46,10 @@ class Uploader(db.Model):
 	TotalUploads = db.IntegerProperty()
 	
 class Rumble(db.Model):
+	#NRFTM = db.StringProperty() --> key_name
 	Teams = db.BooleanProperty()
 	Melee = db.BooleanProperty()
 	Rounds = db.IntegerProperty()
 	Field = db.StringProperty()
 	Name = db.StringProperty() # key_name
+	TotalUploads = db.IntegerProperty()
