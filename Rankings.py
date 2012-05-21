@@ -29,7 +29,7 @@ class Rankings(webapp.RequestHandler):
 		lim = int(requests.get("limit","1000"))
 		ofst = int(requests.get("offset","0"))
 		order = requests.get("order","APS")
-		if order[0] is "-":
+		if order[0] == "-":
 			order = order[1:]
 		else:
 			order = "-" + order
@@ -43,7 +43,7 @@ class Rankings(webapp.RequestHandler):
 		r = q.fetch(limit = lim, offset = ofst)
 
 		outstr = "<html>\n<body>RANKINGS - " + string.upper(game) + "<br>\n<table border=\"1\">\n<tr>"
-		headings = ["Rank","Competitor","APS","W-L","Survival","Pairings","Battles"]
+		headings = ["Rank","Competitor","APS","PL","Survival","Pairings","Battles"]
 		for heading in headings:
 			outstr += "\n<th>" + heading + "</th>"
 		outstr += "\n</tr>"
