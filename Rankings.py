@@ -35,6 +35,8 @@ class Rankings(webapp.RequestHandler):
 			order = "-" + order
 		q = structures.BotEntry.all()
 		q.filter("Rumble =",game)
+		q.filter("Active =",True)
+		
 		#q.filter("Uploader =",structures.total) - Not needed as BotEntry is TOTAL only
 		q.order(order)
 		
