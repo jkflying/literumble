@@ -23,6 +23,7 @@ class Pairing(db.Model):
 	Battles = db.IntegerProperty()
 	Rumble = db.StringProperty()
 	Uploader = db.StringProperty()
+	LastUpload = db.DateTimeProperty()
 	
 
 class BotEntry(db.Model):
@@ -31,9 +32,10 @@ class BotEntry(db.Model):
 	Battles = db.IntegerProperty()
 	Pairings = db.IntegerProperty()
 	APS = db.FloatProperty()
+	Survival = db.FloatProperty()
 	PL = db.IntegerProperty()
 	Rumble = db.StringProperty()
-	LastUpload = db.DateTimeProperty(required=True, auto_now_add=True)
+	LastUpload = db.DateTimeProperty()
 	Active = db.BooleanProperty()
 
 class Uploader(db.Model):
