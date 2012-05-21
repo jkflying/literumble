@@ -20,7 +20,7 @@ allowed_versions = ["1"]
 
 class UploadedResults(webapp.RequestHandler):
 	def post(self):
-		post_headers = self.request.headers
+		#post_headers = self.request.headers
 		post_body = self.request.body
 		
 		sections = post_body.split('&')
@@ -35,7 +35,10 @@ class UploadedResults(webapp.RequestHandler):
 		if version in allowed_versions and client in allowed_clients:
 			uploader = results["user"]
 			
-			user = structures.Uploader.get_by_key_name(user + "|" + version)
+			user = structures.Uploader.get_by_key_name(uploader + "|" + client)
+			if user is None:
+				user = structures.Uploader(key_name = uploader + "|" + client,
+				Name = uploader, Version = version, TotalUploads = 0)
 			
 			rumble = results["game"]
 			bota = results["fname"]
@@ -47,24 +50,26 @@ class UploadedResults(webapp.RequestHandler):
 			pairHashes = [string.join(a,"|") for a in pd]
 						
 			pairs = structures.Pairing.get_by_key_name(pairHashes)
-			for i = [0 1 2 3]:
+			for i in [0, 1, 2, 3]:
 				pair = pairs[i]
 				if pair is None:
 					pairs[i] = structures.Pairing(key_name = pairHashes[i],
 						BotA = pd[i][0], BotB = pd[i][1], Rumble = pd[i][2],
-						Uploader = pd[i][3], Battles = 0, APS = 0, Survival = 0)
+						Uploader = pd[i][3], Battles = 0, APS = 0.0, Survival = 0.0)
 				
-			bd = [[botA, rumble], [botB, rumble]]
+			bd = [[bota, rumble], [botb, rumble]]
 			
 			botHashes = [string.join(a,"|") for a in bd]
 				  
 			bots = structures.BotEntry.get_by_key_name(botHashes)
-			for i in [0 1 2 3]:
-				bot = bots[i]
-				if bot is None:
+			for i in [0, 1]:
+				if bots[i] is None:
 					bots[i] = structures.BotEntry(key_name = botHashes[i],
-							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0,
-							PL = 0, Rumble = rumble, Active = True)				
+							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
+							Survival = 0.0, PL = 0, Rumble = rumble, Active = True)		
+					assert bots[i] is not None
+					
+					print bots[i].Pairings		
 						
 			
 			scorea = float(results["fscore"])
@@ -93,18 +98,18 @@ class UploadedResults(webapp.RequestHandler):
 			pairs[1].Battles += 1
 			
 			totalBattles = pairs[2].Battles
-			botaPairs = float(bot[0].Pairings)
-			botbPairs = float(bot[1].Pairings)
+			botaPairs = float(bots[0].Pairings)
+			botbPairs = float(bots[1].Pairings)
 			if totalBattles == 0:
-				bot[0].APS *= botaPairs/(botaPairs+1)
-				bot[0].Survival *= botPairs/(botaPairs+1)
-				bot[1].APS *= botbPairs/(botbPairs+1)
-				bot[1].Survival *= botbPairs/(botbPairs+1)
+				bots[0].APS *= botaPairs/(botaPairs+1)
+				bots[0].Survival *= botaPairs/(botaPairs+1)
+				bots[1].APS *= botbPairs/(botbPairs+1)
+				bots[1].Survival *= botbPairs/(botbPairs+1)
 			else:
-				bot[0].APS -= pairs[2].APS/botaPairs
-				bot[0].Survival -= pairs[2].Survival/botaPairs
-				bot[1].APS -= pairs[3].APS/botbPairs
-				bot[1].Survival -= pairs[3].Survival/botbPairs
+				bots[0].APS -= pairs[2].APS/botaPairs
+				bots[0].Survival -= pairs[2].Survival/botaPairs
+				bots[1].APS -= pairs[3].APS/botbPairs
+				bots[1].Survival -= pairs[3].Survival/botbPairs
 				
 			
 			wasLoss = pairs[2].APS < 50.0
@@ -112,7 +117,7 @@ class UploadedResults(webapp.RequestHandler):
 			pairs[2].APS += APSa/(totalBattles+1)
 			nowLoss = pairs[2].APS < 50.0
 			
-			if wasLoss and !nowLoss:
+			if wasLoss and not nowLoss:
 				bots[0].PL += 1
 				bots[1].PL -= 1
 			
@@ -125,25 +130,25 @@ class UploadedResults(webapp.RequestHandler):
 			
 
 			if totalBattles == 0:	
-				bot[0].APS += pairs[2].APS/(botaPairs+1)
-				bot[0].Survival += pairs[2].Survival/(botaPairs+1)
-				bot[1].APS += pairs[3].APS/(botbPairs+1)
-				bot[1].Survival += pairs[3].Survival/(botbPairs+1)
+				bots[0].APS += pairs[2].APS/(botaPairs+1)
+				bots[0].Survival += pairs[2].Survival/(botaPairs+1)
+				bots[1].APS += pairs[3].APS/(botbPairs+1)
+				bots[1].Survival += pairs[3].Survival/(botbPairs+1)
 				
-				bot[0].Pairings += 1
-				bot[1].Pairings += 1
+				bots[0].Pairings += 1
+				bots[1].Pairings += 1
 			else:
-				bot[0].APS += pairs[2].APS/botaPairs
-				bot[0].Survival += pairs[2].Survival/botaPairs
-				bot[1].APS += pairs[3].APS/botbPairs
-				bot[0].Survival += pairs[3].Survival/botbPairs
+				bots[0].APS += pairs[2].APS/botaPairs
+				bots[0].Survival += pairs[2].Survival/botaPairs
+				bots[1].APS += pairs[3].APS/botbPairs
+				bots[0].Survival += pairs[3].Survival/botbPairs
 			
 			
 
 			
 			pairs[2].Battles += 1
 			pairs[3].Battles += 1
-			user.Battles += 1
+			user.TotalUploads += 1
 			
 			try:
 				db.put(pairs)
@@ -151,10 +156,9 @@ class UploadedResults(webapp.RequestHandler):
 				db.put(user)
 			except:
 				self.response.out.write("ERROR PUTTING PAIRS DATA \r\n")
-
 			
 			
-			self.response.out.write("OK." + post_body)
+			self.response.out.write("OK.")
 			
 		else:
 			self.response.out.write("CLIENT NOT SUPPORTED")
