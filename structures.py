@@ -12,6 +12,8 @@ from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import webapp
 
+total = "TOTAL"
+
 class Pairing(db.Model):
 	#ABRU = db.StringProperty() --> key_name
 	BotA = db.StringProperty()
@@ -31,8 +33,7 @@ class BotEntry(db.Model):
 	APS = db.FloatProperty()
 	PL = db.IntegerProperty()
 	Rumble = db.StringProperty()
-	Uploader = db.StringProperty()
-	LastUpload = db.DateTimeProperty()
+	LastUpload = db.DateTimeProperty(required=True, auto_now_add=True)
 	Active = db.BooleanProperty()
 
 class Uploader(db.Model):
@@ -42,3 +43,9 @@ class Uploader(db.Model):
 	LastUpload = db.DateTimeProperty()
 	TotalUploads = db.IntegerProperty()
 	
+class Rumble(db.Model):
+	Teams = db.BooleanProperty()
+	Melee = db.BooleanProperty()
+	Rounds = db.IntegerProperty()
+	Field = db.StringProperty()
+	Name = db.StringProperty() # key_name
