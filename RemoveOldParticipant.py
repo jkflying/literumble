@@ -24,31 +24,7 @@ class RemoveOldParticipant(webapp.RequestHandler):
 			for pair in parts:
 				ab = pair.split('=')
 				requests[ab[0]] = ab[1]
-			
-		
-		if "version" not in requests or requests["version"] is not "1":
-			self.response.out.write("ERROR. bad/no version")
-			return
-			
-		game = requests.get("game",None)
-		if game is None:
-			self.response.out.write("ERROR. no game specified")
-			return
-			
-		name = requests.get("name",None)
-		if name is None:
-			self.response.out.write("ERROR. no name specified")
-			return
-		
-		entry = structures.BotEntry.get_by_key_name(name + "|" + game)
-		if entry is None:
-			self.response.out.write("ERROR. name/game combination does not exist")
-			return
-		
-		entry.Active = False
-		
-		entry.put()
-		self.response.out.write("OK. " + name + " retired from " + game)
+		self.response.out.write(removeFromRumble(self,requests))
 	
 	def post(self):
 		parts = self.request.body.split("&")
@@ -57,32 +33,69 @@ class RemoveOldParticipant(webapp.RequestHandler):
 			for pair in parts:
 				ab = pair.split('=')
 				requests[ab[0]] = ab[1]
-			
+		self.response.out.write(removeFromRumble(self,requests))
 		
+
+	def removeFromRumble(self,requests):
 		if "version" not in requests or requests["version"] is not "1":
-			self.response.out.write("ERROR. bad/no version")
-			return
+			return "ERROR. bad/no version"
+			
 			
 		game = requests.get("game",None)
 		if game is None:
-			self.response.out.write("ERROR. no game specified")
-			return
+			return "ERROR. no game specified"
+			
 			
 		name = requests.get("name",None)
 		if name is None:
-			self.response.out.write("ERROR. no name specified")
-			return
+			return "ERROR. no name specified"
+			
 		
 		entry = structures.BotEntry.get_by_key_name(name + "|" + game)
 		if entry is None:
-			self.response.out.write("ERROR. name/game combination does not exist")
-			return
-		
+			return "ERROR. name/game combination does not exist"
+			
 		entry.Active = False
+		qa = structures.Pairing.all()
+		qa.filter("BotA =",name)
+		qa.filter("Rumble =",game)
+		qa.filter("Active =",True)
 		
-		entry.put()
-		self.response.out.write("OK. " + name + " retired from " + game)
+		qb = structures.Pairing.all()
+		qb.filter("BotB =",name)
+		qb.filter("Rumble =",game)
+		qb.filter("Active =",True)
+		
+		pairs = []
+		for pair in qa.run():
+			pairs.append(pair)
+			pairs.Active = False
+		
+		opponentHashes = []
+		modBots = []
+		for pair in pairs:
+			if pair.uploader == structures.total:
+				opponentHashes.append(pair.BotB + "|" + rumble)
+				
+		opponentBots = structures.BotEntry.get_by_key_name(opponentHashes)
+		for bot in opponentBots:
+			if bot is not None:
+				bot.APS -= pair.APS/bot.Pairings
+				bot.APS *= float(bot.Pairings)/(bot.Pairings - 1)
+				bot.Pairings -= 1
+				bot.Battles -= pair.Battles
+				modBots.append(bot)
+			#else:
+				#return "internal database structure error"
+									
+		for pair in qb.run():
+			pairs.append(pair)
+			pairs.Active = False
 
+		db.put(pairs)
+		db.put(modBots)
+		entry.put()
+		return "OK. " + name + " retired from " + game
 
 application = webapp.WSGIApplication([
 	('/RemoveOldParticipant', RemoveOldParticipant)
