@@ -15,3 +15,7 @@ handlers:
   
 - url: .RemoveOldParticipant
   script: RemoveOldParticipant.py
+
+- url: /favicon.ico
+  static_files: favicon.ico
+  upload: favicon.ico
