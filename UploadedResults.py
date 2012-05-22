@@ -12,6 +12,8 @@ from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import webapp
 
+import random
+
 import structures
 
 allowed_clients = ["1.7.3.0","1.7.3.2","1.7.3.6"]
@@ -47,10 +49,9 @@ class UploadedResults(webapp.RequestHandler):
 				game = structures.Rumble(key_name = rumble,
 				Name = rumble, Rounds = int(results["rounds"]),
 				Field = results["field"], Melee = bool(results["melee"] == "YES"),
-				Teams = bool(results["teams"] == "YES"), TotalUploads = 0)
-				#game.put()
-				self.response.out.write("OK. CREATED NEW GAME TYPE!!")
-				#self.response.out.write(str(bool(results["melee"] == "YES")))
+				Teams = bool(results["teams"] == "YES"), TotalUploads = 0,
+				MeleeSize = 10)
+				self.response.out.write("CREATED NEW GAME TYPE " + rumble + "\n")
 			else:
 				field = game.Field == results["field"]
 				rounds = (game.Rounds == int(results["rounds"]))
@@ -59,7 +60,6 @@ class UploadedResults(webapp.RequestHandler):
 				allowed = field and rounds and teams and melee
 				if not allowed:
 					self.response.out.write("OK. ERROR. YOUR RUMBLE CONFIG DOES NOT MATCH RUMBLE NAME!!!")
-					#self.response.out.write(str(field) + str(rounds) + str(teams) + str(melee))
 					return
 				
 			
@@ -78,7 +78,8 @@ class UploadedResults(webapp.RequestHandler):
 				if pair is None:
 					pairs[i] = structures.Pairing(key_name = pairHashes[i],
 						BotA = pd[i][0], BotB = pd[i][1], Rumble = pd[i][2],
-						Uploader = pd[i][3], Battles = 0, APS = 0.0, Survival = 0.0)
+						Uploader = pd[i][3], Battles = 0, APS = 0.0, Survival = 0.0,
+						Active = True)
 				
 			bd = [[bota, rumble], [botb, rumble]]
 			
@@ -164,35 +165,68 @@ class UploadedResults(webapp.RequestHandler):
 				bots[1].Survival += pairs[3].Survival/botbPairs
 			
 			
-
-			bots[0].Battles += 1
-			bots[1].Battles += 1
-			pairs[0].Battles += 1
-			pairs[1].Battles += 1
-			pairs[2].Battles += 1
-			pairs[3].Battles += 1
+			for b in bots:
+				b.Battles += 1
+				b.Active = True
+				b.LastUpload = datetime.datetime.now()
+				
+			for p in pairs:
+				p.Battles += 1
+				p.Active = True
+				p.LastUpload = datetime.datetime.now()
+			
 			user.TotalUploads += 1
 			game.TotalUploads += 1
 			
-			bots[0].LastUpload = datetime.datetime.now()
-			bots[1].LastUpload = datetime.datetime.now()
-			pairs[0].LastUpload = datetime.datetime.now()
-			pairs[1].LastUpload = datetime.datetime.now()
-			pairs[2].LastUpload = datetime.datetime.now()
-			pairs[3].LastUpload = datetime.datetime.now()
 			user.LastUpload = datetime.datetime.now()
 			
 			
 			try:
 				db.put(pairs)
 				db.put(bots)
-				db.put(user)
-				db.put(game)
+				user.put()
+				game.put()
 			except:
 				self.response.out.write("ERROR PUTTING PAIRS DATA \r\n")
+				
+			self.response.out.write("<" + str(bots[0].Battles) + " " + str(bots[1].Battles) + ">")
 			
+			if (game.Melee and (game.MeleeSize*random.random())**2 < 1) or not game.Melee:
+				#TODO: priority battles. can't do with current auto-add rumble. 
+				#could make assumption that melee = 10 bots, and teams = 5, but not future compatible for things like 5vs5
+				#Need to modify client to send meleesize=(int)
+				#Or could set it manually for each rumble.
+				bq = structures.BotEntry.all()
+				bq.filter("Active =",True)
+				bq.filter("Rumble =",rumble)
+				bq.order("Battles")
+				nextbot = None
+				for b in bq.fetch(limit = 1):
+					nextbot = b
+				
+				pq = structures.Pairing.all()
+				pq.filter("Uploader =",structures.total)
+				pq.filter("Active =",True)
+				pq.filter("Rumble =",rumble)
+				pq.filter("BotB =", nextbot.Name)
+				pq.order("Battles")
+				
+				shortPairs = []
+				for pair in pq.fetch(limit = 10):
+					shortPairs.append(pair)
+				index = 0
+				if(len(shortPairs) > 1):
+					index = random.randint(0,len(shortPairs)-1)
+				
+				priopair = shortPairs[index]
+				priobots = [nextbot.Name, priopair.BotA]
+
+				priobots = [b.replace(' ','_') for b in priobots]
+				self.response.out.write("\n[" + string.join(priobots,",") + "]")
+
 			
-			self.response.out.write("OK.")
+			self.response.out.write("\nOK. " + bota + " vs " + botb + " received.")
+
 			
 		else:
 			self.response.out.write("CLIENT NOT SUPPORTED")
