@@ -11,6 +11,7 @@ import string
 from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import webapp
+from google.appengine.api import memcache
 
 import random
 
@@ -43,8 +44,10 @@ class UploadedResults(webapp.RequestHandler):
 			
 			rumble = results["game"]
 			
-			
-			game = structures.Rumble.get_by_key_name(rumble)
+			game = memcache.get(rumble)
+			if(game is None):
+				game = structures.Rumble.get_by_key_name(rumble)
+				
 			if game is None:
 				game = structures.Rumble(key_name = rumble,
 				Name = rumble, Rounds = int(results["rounds"]),
@@ -63,35 +66,71 @@ class UploadedResults(webapp.RequestHandler):
 					return
 				
 			
-			
 			bota = results["fname"]
 			botb = results["sname"]
+			
+			bd = [[bota, rumble], [botb, rumble]]
+			
+			botHashes = [string.join(a,"|") for a in bd]
+			botdict = memcache.get_multi(botHashes)
+			bots = [botdict.get(botHashes[i],None) for i in [0,1]]
+		
+			for i in [0, 1]:
+				if bots[i] is None:
+					bots[i] = structures.BotEntry.get_by_key_name(botHashes[i])
+					if bots[i] is not None:
+						memcache.set(botHashes[i], bots[i])
+						
+				if bots[i] is None:
+					bots[i] = structures.BotEntry(key_name = botHashes[i],
+							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
+							Survival = 0.0, PL = 0, Rumble = rumble, Active = True)
+					bq = structures.BotEntry.all()
+					bq.filter("Rumble =",rumble)
+					bq.filter("Active =", True)
+					newpairs = []
+					for b in bq.run():
+						npd =   [[b.Name , bd[i][0] ,rumble , structures.total], 
+								[bd[i][0] ,b.Name , rumble , structures.total]]
+						npairHashes = [string.join(a,"|") for a in npd]
+						p1 = structures.Pairing(key_name = npairHashes[0],
+							BotA = b.Name, BotB = bd[i][0], Rumble = rumble, 
+							Uploader = structures.total, Battles = 0, APS = 0.0, Survival = 0.0,
+							Active = True)
+						p2 = structures.Pairing(key_name = npairHashes[0],
+							BotB = b.Name, BotA = bd[i][0], Rumble = rumble, 
+							Uploader = structures.total, Battles = 0, APS = 0.0, Survival = 0.0,
+							Active = True)
+						newpairs.append(p1)
+						newpairs.append(p2)
+					npdict = {}
+					for p in newpairs:
+						npdict[p.key().name()] = p
+					memcache.set_multi(npdict)
+					db.put(newpairs)
+					self.response.out.write("Added " + bd[i][0] + " to " + rumble)
+					
 			pd =   [[bota , botb ,rumble , uploader], 
 						[botb ,bota , rumble , uploader],
 						[bota , botb , rumble , structures.total],
 						[botb , bota , rumble , structures.total]]
 			pairHashes = [string.join(a,"|") for a in pd]
-						
-			pairs = structures.Pairing.get_by_key_name(pairHashes)
+			
+			pairsmemdict = memcache.get_multi(pairHashes)
+			pairs = [pairsmemdict.get(pairHashes[i],None) for i in [0,1,2,3]]
+
 			for i in [0, 1, 2, 3]:
-				pair = pairs[i]
-				if pair is None:
+				if pairs[i] is None:
+					pairs[i] = structures.Pairing.get_by_key_name(pairHashes[i])
+					if pairs[i] is not None:
+						memcache.set(pairHashes[i],pairs[i])
+				if pairs[i] is None:
 					pairs[i] = structures.Pairing(key_name = pairHashes[i],
 						BotA = pd[i][0], BotB = pd[i][1], Rumble = pd[i][2],
 						Uploader = pd[i][3], Battles = 0, APS = 0.0, Survival = 0.0,
 						Active = True)
 				
-			bd = [[bota, rumble], [botb, rumble]]
-			
-			botHashes = [string.join(a,"|") for a in bd]
-				  
-			bots = structures.BotEntry.get_by_key_name(botHashes)
-			for i in [0, 1]:
-				if bots[i] is None:
-					bots[i] = structures.BotEntry(key_name = botHashes[i],
-							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
-							Survival = 0.0, PL = 0, Rumble = rumble, Active = True)			
-						
+
 			
 			scorea = float(results["fscore"])
 			scoreb = float(results["sscore"])
@@ -182,6 +221,18 @@ class UploadedResults(webapp.RequestHandler):
 			
 			
 			try:
+				pairdict = {}
+				for p in pairs:
+					pairdict[p.key().name()] = p
+				memcache.set_multi(pairdict)
+				botdict = {}
+				for b in bots:
+					botdict[b.key().name()] = b
+				memcache.set_multi(botdict)
+				
+				memcache.set(user.key().name(),user)
+				memcache.set(game.key().name(),game)
+				
 				db.put(pairs)
 				db.put(bots)
 				user.put()
@@ -200,6 +251,7 @@ class UploadedResults(webapp.RequestHandler):
 				bq.filter("Active =",True)
 				bq.filter("Rumble =",rumble)
 				bq.order("Battles")
+				bq.order("Pairings")
 				nextbot = None
 				for b in bq.fetch(limit = 1):
 					nextbot = b
@@ -214,15 +266,16 @@ class UploadedResults(webapp.RequestHandler):
 				shortPairs = []
 				for pair in pq.fetch(limit = 10):
 					shortPairs.append(pair)
-				index = 0
-				if(len(shortPairs) > 1):
-					index = random.randint(0,len(shortPairs)-1)
-				
-				priopair = shortPairs[index]
-				priobots = [nextbot.Name, priopair.BotA]
+				if len(shortPairs) > 0:
+					index = 0
+					if len(shortPairs) > 1:
+						index = random.randint(0,len(shortPairs)-1)
+					
+					priopair = shortPairs[index]
+					priobots = [nextbot.Name, priopair.BotA]
 
-				priobots = [b.replace(' ','_') for b in priobots]
-				self.response.out.write("\n[" + string.join(priobots,",") + "]")
+					priobots = [b.replace(' ','_') for b in priobots]
+					self.response.out.write("\n[" + string.join(priobots,",") + "]")
 
 			
 			self.response.out.write("\nOK. " + bota + " vs " + botb + " received.")
