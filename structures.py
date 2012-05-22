@@ -24,7 +24,7 @@ class Pairing(db.Model):
 	Rumble = db.StringProperty()
 	Uploader = db.StringProperty()
 	LastUpload = db.DateTimeProperty()
-	
+	Active = db.BooleanProperty()
 
 class BotEntry(db.Model):
 	#NR = db.StringProperty() --> key_name
@@ -49,6 +49,7 @@ class Rumble(db.Model):
 	#NRFTM = db.StringProperty() --> key_name
 	Teams = db.BooleanProperty()
 	Melee = db.BooleanProperty()
+	MeleeSize = db.IntegerProperty()
 	Rounds = db.IntegerProperty()
 	Field = db.StringProperty()
 	Name = db.StringProperty() # key_name
