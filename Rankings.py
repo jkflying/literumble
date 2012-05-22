@@ -12,7 +12,7 @@ import string
 from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import webapp
-
+from operator import attrgetter
 import structures
 
 class Rankings(webapp.RequestHandler):
@@ -26,21 +26,32 @@ class Rankings(webapp.RequestHandler):
 				requests[ab[0]] = ab[1]
 			
 		game = requests.get("game","meleerumble")
-		lim = int(requests.get("limit","1000"))
+		lim = int(requests.get("limit","-1"))
 		ofst = int(requests.get("offset","0"))
 		order = requests.get("order","APS")
+		
+		reverseSort = True
 		if order[0] == "-":
 			order = order[1:]
-		else:
-			order = "-" + order
+			reverseSort = False
+			
 		q = structures.BotEntry.all()
 		q.filter("Rumble =",game)
 		q.filter("Active =",True)
 		
 		#q.filter("Uploader =",structures.total) - Not needed as BotEntry is TOTAL only
-		q.order(order)
 		
+		if lim == -1:
+			lim = None
+		else:
+			q.order("-APS")
+			
 		r = q.fetch(limit = lim, offset = ofst)
+		bots = []
+		for bot in r:
+			bots.append(bot)
+		
+		bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)
 
 		outstr = "<html>\n<body>RANKINGS - " + string.upper(game) + "<br>\n<table border=\"1\">\n<tr>"
 		headings = ["Rank","Competitor","APS","PL","Survival","Pairings","Battles"]
@@ -48,7 +59,7 @@ class Rankings(webapp.RequestHandler):
 			outstr += "\n<th>" + heading + "</th>"
 		outstr += "\n</tr>"
 		rank = 1
-		for bot in r:
+		for bot in bots:
 			cells = [str(rank),bot.Name,bot.APS,bot.PL,bot.Survival,bot.Pairings,bot.Battles]
 			line = "\n<tr>"
 			for cell in cells:
