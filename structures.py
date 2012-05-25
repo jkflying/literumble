@@ -58,7 +58,7 @@ class BotEntry(db.Model):
 	Rumble = db.StringProperty()
 	LastUpload = db.DateTimeProperty(indexed = False)
 	Active = db.BooleanProperty()
-	PairingsList = db.ListProperty(indexed = False)
+	PairingsList = db.TextProperty()
 
 class Uploader(db.Model):
 	#NC = db.StringProperty() --> key_name

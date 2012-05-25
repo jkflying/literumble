@@ -12,6 +12,7 @@ import string
 from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import webapp
+from google.appengine.api import memcache
 from operator import attrgetter
 import structures
 
@@ -26,7 +27,7 @@ class Rankings(webapp.RequestHandler):
 				requests[ab[0]] = ab[1]
 			
 		game = requests.get("game","meleerumble")
-		lim = int(requests.get("limit","-1"))
+		lim = int(requests.get("limit","10000000"))
 		ofst = int(requests.get("offset","0"))
 		order = requests.get("order","APS")
 		
@@ -66,7 +67,7 @@ class Rankings(webapp.RequestHandler):
 		
 		bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)
 
-		outstr = "<html>\n<body>RANKINGS - " + string.upper(game) + "<br>\n<table border=\"1\">\n<tr>"
+		outstr = "<html>\n<body>RANKINGS - " + string.upper(game) + " WITH " + str(len(rumble.Participants)) + " BOTS<br>\n<table border=\"1\">\n<tr>"
 		headings = ["  ","Competitor","APS","PL","Survival","Pairings","Battles"]
 		for heading in headings:
 			outstr += "\n<th>" + heading + "</th>"
@@ -83,11 +84,11 @@ class Rankings(webapp.RequestHandler):
 			
 			outstr += line
 			rank += 1
+			
 		outstr += "</table>"
 		elapsed = time.time() - starttime
 		outstr += "<br>\n Page served in " + str(int(round(elapsed*1000))) + "ms"
 		outstr += "</body></html>"
-		self.response.out.write(outstr)
 		
 		if len(rmis) > 0:
 			botsdict = {}

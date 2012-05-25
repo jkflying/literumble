@@ -7,6 +7,7 @@ try:
 except:
     import simplejson as json
 import string
+import pickle
 
 from google.appengine.ext import db
 from google.appengine.api import users
@@ -58,7 +59,7 @@ class UploadedResults(webapp.RequestHandler):
 				Name = rumble, Rounds = int(results["rounds"]),
 				Field = results["field"], Melee = bool(results["melee"] == "YES"),
 				Teams = bool(results["teams"] == "YES"), TotalUploads = 0,
-				MeleeSize = 10, Participants = "")
+				MeleeSize = 10, Participants = [])
 				self.response.out.write("CREATED NEW GAME TYPE " + rumble + "\n")
 			else:
 				field = game.Field == results["field"]
@@ -101,7 +102,7 @@ class UploadedResults(webapp.RequestHandler):
 					bots[i] = structures.BotEntry(key_name = botHashes[i],
 							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
 							Survival = 0.0, PL = 0, Rumble = rumble, Active = True,
-							PairingsList = [])
+							PairingsList = pickle.dumps([]))
 					game.Participants.append(bd[i][0])
 					game.Participants = list(set(game.Participants))
 					self.response.out.write("Added " + bd[i][0] + " to " + rumble + "\n")
@@ -118,11 +119,19 @@ class UploadedResults(webapp.RequestHandler):
 			
 			survivala = 100.0*survivala/game.Rounds
 			survivalb = 100.0*survivalb/game.Rounds
+			plista = None
+			try:
+				plista = pickle.loads(bots[0].PairingsList)
+			except:
+				plista = []
+			#assert bots[0].Pairings == len(plista)
 			
-			plista = bots[0].PairingsList
-			assert bots[0].Pairings == len(plista)
-			plistb = bots[1].PairingsList
-			assert bots[1].Pairings == len(plistb)
+			try:
+				plistb = pickle.loads(bots[1].PairingsList)
+			except:
+				plistb = []
+				
+			#assert bots[1].Pairings == len(plistb)
 			
 			apair = None
 			for p in plista:
@@ -137,12 +146,12 @@ class UploadedResults(webapp.RequestHandler):
 				if p.name == bota:
 					bpair = p
 			if bpair is None:
-				bpair = structures.Scoreset(name = bota)
+				bpair = structures.ScoreSet(name = bota)
 				plistb.append(bpair)
 			
 			
-			botaPairs = bot[0].Pairings
-			botbPairs = bot[1].Pairings
+			botaPairs = bots[0].Pairings
+			botbPairs = bots[1].Pairings
 			
 			totalBattles = apair.Battles
 			if totalBattles == 0:
@@ -161,7 +170,7 @@ class UploadedResults(webapp.RequestHandler):
 			wasLoss = apair.APS < 50.0
 			apair.APS *= float(totalBattles)/(totalBattles + 1)
 			apair.APS += APSa/(totalBattles+1)
-			nowLoss = pairs[2].APS < 50.0
+			nowLoss = apair.APS < 50.0
 			
 			if wasLoss and not nowLoss:
 				bots[0].PL += 1
@@ -177,18 +186,18 @@ class UploadedResults(webapp.RequestHandler):
 			
 
 			if totalBattles == 0:	
-				bots[0].APS += apair.APS/(botaPairs+1)
-				bots[0].Survival += apair.Survival/(botaPairs+1)
-				bots[1].APS += bpair.APS/(botbPairs+1)
-				bots[1].Survival += bpair.Survival/(botbPairs+1)
+				bots[0].APS += APSa/(botaPairs+1)
+				bots[0].Survival += survivala/(botaPairs+1)
+				bots[1].APS += APSb/(botbPairs+1)
+				bots[1].Survival += survivalb/(botbPairs+1)
 				
 				bots[0].Pairings += 1
 				bots[1].Pairings += 1
 			else:
-				bots[0].APS += apair.APS/botaPairs
-				bots[0].Survival += apair.Survival/botaPairs
-				bots[1].APS += bpair.APS/botbPairs
-				bots[1].Survival += bpair.Survival/botbPairs
+				bots[0].APS += APSa/botaPairs
+				bots[0].Survival += survivala/botaPairs
+				bots[1].APS += APSb/botbPairs
+				bots[1].Survival += survivalb/botbPairs
 			
 			
 			participantsSet = set(game.Participants)
@@ -203,27 +212,22 @@ class UploadedResults(webapp.RequestHandler):
 						
 						
 				b.LastUpload = datetime.datetime.now()
-				
-			for p in pairs:
-				p.Battles += 1
-				if not p.Activ
-				p.Active = True
-				p.LastUpload = datetime.datetime.now()
-			
+
 			user.TotalUploads += 1
 			game.TotalUploads += 1
 			
 			user.LastUpload = datetime.datetime.now()
 			
-
-			for b in bots:
-				i = 0
-				while i < b.Pairings:
-					if b.PairingsList[i].Name not in participantsSet:
-						b.Pairings.pop(i)
-						b.Pairings -= 1
+			pairingsarray = [plista,plistb]
+			for i in [0,1]:
+				b = bots[i]
+				pairings = pairingsarray[i]
+				while i < len(pairings):
+					if pairings[i].Name not in participantsSet:
+						pairings.pop(i)
+						b.Pairings = len(pairings)
 					i += 1
-
+				b.PairingsList = pickle.dumps(pairings)
 				
 			self.response.out.write("<" + str(bots[0].Battles) + " " + str(bots[1].Battles) + ">")
 			
@@ -235,20 +239,25 @@ class UploadedResults(webapp.RequestHandler):
 				#4: PROFIT!!!
 				
 				priobot = None
+				priopairs = None
 				if bots[0].Pairings < bots[1].Pairings:
 					priobot = bots[0]
+					priopairs = plista
 				elif bots[0].Pairings > bots[1].Pairings:
 					priobot = bots[1]
+					priopair = plistb
 				elif bots[0].Battles <= bots[1].Battles:
 					priobot = bots[0]
+					priopair = plista
 				else:
 					priobot = bots[1]
+					priopair = plistb
 				
 				priobot2 = None
 				if priobot.Pairings < len(game.Participants):
 					#create the first battle of a new pairing
 					pairsdict = {}
-					for b in priobot.PairingsList:
+					for b in priopair:
 						pairsdict[b.Name] = b
 					for p in game.Participants:
 						b = pairsdict.get(p,None)
@@ -263,14 +272,16 @@ class UploadedResults(webapp.RequestHandler):
 								
 				else:
 					#find the lowest battled pairing
-					priobot.PairingsList = sorted(priobot.PairingsList, key = lambda score: score.Battles)
+					priopair = sorted(priopair, key = lambda score: score.Battles)
 					pIndex = int(random.random()**3 * priobot.Pairings)
-					priobot2 = priobot.PairingsList
+					priobot2 = priopair[pIndex]
 					
-				priobots [priobot,priobot2]
+				priobots = [priobot.Name,priobot2.Name]
 				priobots = [b.replace(' ','_') for b in priobots]
 				self.response.out.write("\n[" + string.join(priobots,",") + "]")
 
+			for i in [0,1]:
+				bots[i].PairingsList = pickle.dumps(pairingsarray[i])
 			
 			try:
 				botdict = {}
