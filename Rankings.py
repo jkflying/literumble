@@ -35,31 +35,46 @@ class Rankings(webapp.RequestHandler):
 			order = order[1:]
 			reverseSort = False
 			
-		q = structures.BotEntry.all()
-		q.filter("Rumble =",game)
-		q.filter("Active =",True)
+
+		rumble = memcache.get(game)
+		if rumble is None:
+			rumble = structures.Rumble.get_by_key_name(game)
+		if rumble is None:
+			self.response.out.write("RUMBLE NOT FOUND")
+			return
 		
-		#q.filter("Uploader =",structures.total) - Not needed as BotEntry is TOTAL only
+
+		botHashes = [b + "|" + game for b in rumble.Participants]
+		rdict = memcache.get_multi(botHashes)
+		r = [rdict.get(h,None) for h in botHashes]
+		missingHashes = []
+		missingIndexes = []
+		for i in range(len(r)):
+			if r[i] is None:
+				missingHashes.append(botHashes[i])
+				missingIndexes.append(i)
 		
-		if lim == -1:
-			lim = None
-		else:
-			q.order("-APS")
-			
-		r = q.fetch(limit = lim, offset = ofst)
+		rmis = structures.BotEntry.get_by_key_name(missingHashes)
+		for i in range(len(missingHashes)):
+			r[missingIndexes[i]] = rmis[i]
+		
 		bots = []
+
 		for bot in r:
 			bots.append(bot)
+
 		
 		bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)
 
 		outstr = "<html>\n<body>RANKINGS - " + string.upper(game) + "<br>\n<table border=\"1\">\n<tr>"
-		headings = ["Rank","Competitor","APS","PL","Survival","Pairings","Battles"]
+		headings = ["  ","Competitor","APS","PL","Survival","Pairings","Battles"]
 		for heading in headings:
 			outstr += "\n<th>" + heading + "</th>"
 		outstr += "\n</tr>"
 		rank = 1
 		for bot in bots:
+			if rank > lim:
+				break
 			cells = [str(rank),bot.Name,bot.APS,bot.PL,bot.Survival,bot.Pairings,bot.Battles]
 			line = "\n<tr>"
 			for cell in cells:
@@ -72,6 +87,14 @@ class Rankings(webapp.RequestHandler):
 		elapsed = time.time() - starttime
 		outstr += "<br>\n Page served in " + str(int(round(elapsed*1000))) + "ms"
 		outstr += "</body></html>"
+		self.response.out.write(outstr)
+		
+		if len(rmis) > 0:
+			botsdict = {}
+			for bot in rmis:
+				botsdict[bot.key().name()] = bot
+			memcache.set_multi(botsdict)
+			
 		self.response.out.write(outstr)
 
 

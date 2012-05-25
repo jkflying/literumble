@@ -13,6 +13,7 @@ import string
 from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import webapp
+from google.appengine.api import memcache
 
 import structures
 
@@ -36,66 +37,45 @@ class RemoveOldParticipant(webapp.RequestHandler):
 		self.response.out.write(removeFromRumble(self,requests))
 		
 
-	def removeFromRumble(self,requests):
-		if "version" not in requests or requests["version"] is not "1":
-			return "ERROR. bad/no version"
-			
-			
-		game = requests.get("game",None)
-		if game is None:
-			return "ERROR. no game specified"
-			
-			
-		name = requests.get("name",None)
-		if name is None:
-			return "ERROR. no name specified"
-			
+def removeFromRumble(self,requests):
+	if "version" not in requests or requests["version"] is not "1":
+		return "ERROR. bad/no version"
 		
-		entry = structures.BotEntry.get_by_key_name(name + "|" + game)
-		if entry is None:
-			return "ERROR. name/game combination does not exist"
-			
-		entry.Active = False
-		qa = structures.Pairing.all()
-		qa.filter("BotA =",name)
-		qa.filter("Rumble =",game)
-		qa.filter("Active =",True)
 		
-		qb = structures.Pairing.all()
-		qb.filter("BotB =",name)
-		qb.filter("Rumble =",game)
-		qb.filter("Active =",True)
+	game = requests.get("game",None)
+	if game is None:
+		return "ERROR. no game specified"
 		
-		pairs = []
-		for pair in qa.run():
-			pairs.append(pair)
-			pairs.Active = False
 		
-		opponentHashes = []
-		modBots = []
-		for pair in pairs:
-			if pair.uploader == structures.total:
-				opponentHashes.append(pair.BotB + "|" + rumble)
-				
-		opponentBots = structures.BotEntry.get_by_key_name(opponentHashes)
-		for bot in opponentBots:
-			if bot is not None:
-				bot.APS -= pair.APS/bot.Pairings
-				bot.APS *= float(bot.Pairings)/(bot.Pairings - 1)
-				bot.Pairings -= 1
-				bot.Battles -= pair.Battles
-				modBots.append(bot)
-			#else:
-				#return "internal database structure error"
-									
-		for pair in qb.run():
-			pairs.append(pair)
-			pairs.Active = False
+	name = requests.get("name",None)
+	if name is None:
+		return "ERROR. no name specified"
+	
+	rumble = memcache.get(game)
+	if rumble is None:
+		rumble = structures.Rumble.get_by_key_name(game)
 
-		db.put(pairs)
-		db.put(modBots)
-		entry.put()
-		return "OK. " + name + " retired from " + game
+	
+	keyhash = name + "|" + game
+	entry = memcache.get(keyhash)
+	if entry is None:
+		entry = structures.BotEntry.get_by_key_name(keyhash)
+	if entry is None:
+		return "ERROR. name/game combination does not exist: " + name + " " + game
+		
+	entry.Active = False
+	pset = set(rumble.Participants)#avoid duplicates etc - a bit of spring cleaning
+	pset.discard(entry.Name)
+	
+	rumble.Participants = list(pset)
+	
+	memcache.set(entry.key().name(),entry)
+	entry.put()
+	
+	memcache.set(game,rumble)
+	rumble.put()
+	
+	return "OK. " + name + " retired from " + game
 
 application = webapp.WSGIApplication([
 	('/RemoveOldParticipant', RemoveOldParticipant)

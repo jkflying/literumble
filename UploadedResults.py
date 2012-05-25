@@ -12,8 +12,9 @@ from google.appengine.ext import db
 from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
-
+from operator import attrgetter
 import random
+import time
 
 import structures
 
@@ -23,6 +24,7 @@ allowed_versions = ["1"]
 
 class UploadedResults(webapp.RequestHandler):
 	def post(self):
+		starttime = time.time()
 		post_body = self.request.body
 		
 		sections = post_body.split('&')
@@ -37,7 +39,10 @@ class UploadedResults(webapp.RequestHandler):
 		if version in allowed_versions and client in allowed_clients:
 			uploader = results["user"]
 			
-			user = structures.Uploader.get_by_key_name(uploader + "|" + client)
+			user = memcache.get(uploader + "|" + client)
+			if user is None:
+				user = structures.Uploader.get_by_key_name(uploader + "|" + client)
+				
 			if user is None:
 				user = structures.Uploader(key_name = uploader + "|" + client,
 				Name = uploader, Version = version, TotalUploads = 0)
@@ -53,7 +58,7 @@ class UploadedResults(webapp.RequestHandler):
 				Name = rumble, Rounds = int(results["rounds"]),
 				Field = results["field"], Melee = bool(results["melee"] == "YES"),
 				Teams = bool(results["teams"] == "YES"), TotalUploads = 0,
-				MeleeSize = 10)
+				MeleeSize = 10, Participants = "")
 				self.response.out.write("CREATED NEW GAME TYPE " + rumble + "\n")
 			else:
 				field = game.Field == results["field"]
@@ -62,7 +67,18 @@ class UploadedResults(webapp.RequestHandler):
 				melee = game.Melee == bool(results["melee"] == "YES")
 				allowed = field and rounds and teams and melee
 				if not allowed:
-					self.response.out.write("OK. ERROR. YOUR RUMBLE CONFIG DOES NOT MATCH RUMBLE NAME!!!")
+					self.response.out.write("OK. ERROR. Incorrect " + rumble + " config: ")
+					errorReasons = []
+					if not field:
+						errorReasons.append("field size ")
+					if not rounds:
+						errorReasons.append("number of rounds ")
+					if not teams:
+						errorReasons.append("teams ")
+					if not melee:
+						errorReasons.append("melee ")
+					self.response.out.write(string.join(errorReasons,", "))
+					
 					return
 				
 			
@@ -73,64 +89,24 @@ class UploadedResults(webapp.RequestHandler):
 			
 			botHashes = [string.join(a,"|") for a in bd]
 			botdict = memcache.get_multi(botHashes)
-			bots = [botdict.get(botHashes[i],None) for i in [0,1]]
+			bots = [botdict.get(h,None) for h in botHashes]
 		
 			for i in [0, 1]:
 				if bots[i] is None:
 					bots[i] = structures.BotEntry.get_by_key_name(botHashes[i])
-					if bots[i] is not None:
-						memcache.set(botHashes[i], bots[i])
+					#if bots[i] is not None:
+					#	memcache.set(botHashes[i], bots[i])
 						
 				if bots[i] is None:
 					bots[i] = structures.BotEntry(key_name = botHashes[i],
 							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
-							Survival = 0.0, PL = 0, Rumble = rumble, Active = True)
-					bq = structures.BotEntry.all()
-					bq.filter("Rumble =",rumble)
-					bq.filter("Active =", True)
-					newpairs = []
-					for b in bq.run():
-						npd =   [[b.Name , bd[i][0] ,rumble , structures.total], 
-								[bd[i][0] ,b.Name , rumble , structures.total]]
-						npairHashes = [string.join(a,"|") for a in npd]
-						p1 = structures.Pairing(key_name = npairHashes[0],
-							BotA = b.Name, BotB = bd[i][0], Rumble = rumble, 
-							Uploader = structures.total, Battles = 0, APS = 0.0, Survival = 0.0,
-							Active = True)
-						p2 = structures.Pairing(key_name = npairHashes[0],
-							BotB = b.Name, BotA = bd[i][0], Rumble = rumble, 
-							Uploader = structures.total, Battles = 0, APS = 0.0, Survival = 0.0,
-							Active = True)
-						newpairs.append(p1)
-						newpairs.append(p2)
-					npdict = {}
-					for p in newpairs:
-						npdict[p.key().name()] = p
-					memcache.set_multi(npdict)
-					db.put(newpairs)
-					self.response.out.write("Added " + bd[i][0] + " to " + rumble)
+							Survival = 0.0, PL = 0, Rumble = rumble, Active = True,
+							PairingsList = [])
+					game.Participants.append(bd[i][0])
+					game.Participants = list(set(game.Participants))
+					self.response.out.write("Added " + bd[i][0] + " to " + rumble + "\n")
 					
-			pd =   [[bota , botb ,rumble , uploader], 
-						[botb ,bota , rumble , uploader],
-						[bota , botb , rumble , structures.total],
-						[botb , bota , rumble , structures.total]]
-			pairHashes = [string.join(a,"|") for a in pd]
 			
-			pairsmemdict = memcache.get_multi(pairHashes)
-			pairs = [pairsmemdict.get(pairHashes[i],None) for i in [0,1,2,3]]
-
-			for i in [0, 1, 2, 3]:
-				if pairs[i] is None:
-					pairs[i] = structures.Pairing.get_by_key_name(pairHashes[i])
-					if pairs[i] is not None:
-						memcache.set(pairHashes[i],pairs[i])
-				if pairs[i] is None:
-					pairs[i] = structures.Pairing(key_name = pairHashes[i],
-						BotA = pd[i][0], BotB = pd[i][1], Rumble = pd[i][2],
-						Uploader = pd[i][3], Battles = 0, APS = 0.0, Survival = 0.0,
-						Active = True)
-				
-
 			
 			scorea = float(results["fscore"])
 			scoreb = float(results["sscore"])
@@ -139,78 +115,98 @@ class UploadedResults(webapp.RequestHandler):
 			
 			survivala = float(results["fsurvival"])
 			survivalb = float(results["ssurvival"])
-			if survivala + survivalb > 0.0:
-				survivala = 100.0*survivala/(survivala+survivalb)
-				survivalb = 100.0 - survivala
-			else:
-				survivala = 50.0
-				survivalb = 50.0
-			uploaderBattles = pairs[0].Battles
 			
-			pairs[0].APS*= float(uploaderBattles)/(uploaderBattles + 1)
-			pairs[0].APS += APSa/(uploaderBattles + 1)
+			survivala = 100.0*survivala/game.Rounds
+			survivalb = 100.0*survivalb/game.Rounds
 			
-			pairs[1].APS = 100 - pairs[0].APS
+			plista = bots[0].PairingsList
+			assert bots[0].Pairings == len(plista)
+			plistb = bots[1].PairingsList
+			assert bots[1].Pairings == len(plistb)
 			
-			pairs[0].Survival *= float(uploaderBattles)/(uploaderBattles + 1)
-			pairs[0].Survival += survivala/(uploaderBattles + 1)
-			
-			pairs[1].Survival = 100 - pairs[0].Survival
+			apair = None
+			for p in plista:
+				if p.Name == botb:
+					apair = p
+			if apair is None:
+				apair = structures.ScoreSet(name = botb)
+				plista.append(apair)
 
-			totalBattles = pairs[2].Battles
-			botaPairs = float(bots[0].Pairings)
-			botbPairs = float(bots[1].Pairings)
+			bpair = None
+			for p in plistb:
+				if p.name == bota:
+					bpair = p
+			if bpair is None:
+				bpair = structures.Scoreset(name = bota)
+				plistb.append(bpair)
+			
+			
+			botaPairs = bot[0].Pairings
+			botbPairs = bot[1].Pairings
+			
+			totalBattles = apair.Battles
 			if totalBattles == 0:
 				bots[0].APS *= botaPairs/(botaPairs+1)
 				bots[0].Survival *= botaPairs/(botaPairs+1)
 				bots[1].APS *= botbPairs/(botbPairs+1)
 				bots[1].Survival *= botbPairs/(botbPairs+1)
 			else:
-				bots[0].APS -= pairs[2].APS/botaPairs
-				bots[0].Survival -= pairs[2].Survival/botaPairs
-				bots[1].APS -= pairs[3].APS/botbPairs
-				bots[1].Survival -= pairs[3].Survival/botbPairs
-				
+				bots[0].APS -= apair.APS/botaPairs
+				bots[0].Survival -= apair.Survival/botaPairs
+				bots[1].APS -= bpair.APS/botbPairs
+				bots[1].Survival -= bpair.Survival/botbPairs
 			
-			wasLoss = pairs[2].APS < 50.0
-			pairs[2].APS *= float(totalBattles)/(totalBattles + 1)
-			pairs[2].APS += APSa/(totalBattles+1)
+			
+			
+			wasLoss = apair.APS < 50.0
+			apair.APS *= float(totalBattles)/(totalBattles + 1)
+			apair.APS += APSa/(totalBattles+1)
 			nowLoss = pairs[2].APS < 50.0
 			
 			if wasLoss and not nowLoss:
 				bots[0].PL += 1
 				bots[1].PL -= 1
 			
-			pairs[3].APS = 100 - pairs[2].APS
+			bpair.APS = 100 - apair.APS
 			
-			pairs[2].Survival *= float(totalBattles)/(totalBattles + 1)
-			pairs[2].Survival += survivala/(totalBattles+1)
+			apair.Survival *= float(totalBattles)/(totalBattles + 1)
+			apair.Survival += survivala/(totalBattles+1)
 			
-			pairs[3].Survival = 100 - pairs[2].Survival
+			bpair.Survival *= float(totalBattles)/(totalBattles + 1)
+			bpair.Survival += survivalb/(totalBattles+1)
 			
 
 			if totalBattles == 0:	
-				bots[0].APS += pairs[2].APS/(botaPairs+1)
-				bots[0].Survival += pairs[2].Survival/(botaPairs+1)
-				bots[1].APS += pairs[3].APS/(botbPairs+1)
-				bots[1].Survival += pairs[3].Survival/(botbPairs+1)
+				bots[0].APS += apair.APS/(botaPairs+1)
+				bots[0].Survival += apair.Survival/(botaPairs+1)
+				bots[1].APS += bpair.APS/(botbPairs+1)
+				bots[1].Survival += bpair.Survival/(botbPairs+1)
 				
 				bots[0].Pairings += 1
 				bots[1].Pairings += 1
 			else:
-				bots[0].APS += pairs[2].APS/botaPairs
-				bots[0].Survival += pairs[2].Survival/botaPairs
-				bots[1].APS += pairs[3].APS/botbPairs
-				bots[1].Survival += pairs[3].Survival/botbPairs
+				bots[0].APS += apair.APS/botaPairs
+				bots[0].Survival += apair.Survival/botaPairs
+				bots[1].APS += bpair.APS/botbPairs
+				bots[1].Survival += bpair.Survival/botbPairs
 			
+			
+			participantsSet = set(game.Participants)
 			
 			for b in bots:
 				b.Battles += 1
-				b.Active = True
+				if not b.Active:
+					b.Active = True
+					if b.Name not in participantsSet:
+						game.Participants.append(b.Name)
+						participantsSet.add(b.Name)
+						
+						
 				b.LastUpload = datetime.datetime.now()
 				
 			for p in pairs:
 				p.Battles += 1
+				if not p.Activ
 				p.Active = True
 				p.LastUpload = datetime.datetime.now()
 			
@@ -219,70 +215,86 @@ class UploadedResults(webapp.RequestHandler):
 			
 			user.LastUpload = datetime.datetime.now()
 			
+
+			for b in bots:
+				i = 0
+				while i < b.Pairings:
+					if b.PairingsList[i].Name not in participantsSet:
+						b.Pairings.pop(i)
+						b.Pairings -= 1
+					i += 1
+
+				
+			self.response.out.write("<" + str(bots[0].Battles) + " " + str(bots[1].Battles) + ">")
+			
+			if not game.Melee or 0.5*game.MeleeSize*(1 + game.MeleeSize)*random.random() < 1:
+				#do a gradient descent to the lowest battled pairings
+				#1: take the bot of this pair which has less battles
+				#2: find an empty pairing or take a low pairing
+				#3: ????
+				#4: PROFIT!!!
+				
+				priobot = None
+				if bots[0].Pairings < bots[1].Pairings:
+					priobot = bots[0]
+				elif bots[0].Pairings > bots[1].Pairings:
+					priobot = bots[1]
+				elif bots[0].Battles <= bots[1].Battles:
+					priobot = bots[0]
+				else:
+					priobot = bots[1]
+				
+				priobot2 = None
+				if priobot.Pairings < len(game.Participants):
+					#create the first battle of a new pairing
+					pairsdict = {}
+					for b in priobot.PairingsList:
+						pairsdict[b.Name] = b
+					for p in game.Participants:
+						b = pairsdict.get(p,None)
+						if b is None:
+							priobot2 = memcache.get(p + "|" + rumble)
+							if priobot2 is None:
+								priobot2 = structures.BotEntry.get_by_key_name(p + "|" + rumble)
+							if priobot2 is not None and priobot2.Active:
+								break
+							else:
+								self.response.out.write("\nERROR: Participants list points to nonexistant/retired bot " + p)
+								
+				else:
+					#find the lowest battled pairing
+					priobot.PairingsList = sorted(priobot.PairingsList, key = lambda score: score.Battles)
+					pIndex = int(random.random()**3 * priobot.Pairings)
+					priobot2 = priobot.PairingsList
+					
+				priobots [priobot,priobot2]
+				priobots = [b.replace(' ','_') for b in priobots]
+				self.response.out.write("\n[" + string.join(priobots,",") + "]")
+
 			
 			try:
-				pairdict = {}
-				for p in pairs:
-					pairdict[p.key().name()] = p
-				memcache.set_multi(pairdict)
 				botdict = {}
 				for b in bots:
 					botdict[b.key().name()] = b
 				memcache.set_multi(botdict)
 				
 				memcache.set(user.key().name(),user)
-				memcache.set(game.key().name(),game)
+				memcache.set(game.Name,game)
 				
-				db.put(pairs)
 				db.put(bots)
 				user.put()
 				game.put()
 			except:
 				self.response.out.write("ERROR PUTTING PAIRS DATA \r\n")
-				
-			self.response.out.write("<" + str(bots[0].Battles) + " " + str(bots[1].Battles) + ">")
 			
-			if (game.Melee and (game.MeleeSize*random.random())**2 < 1) or not game.Melee:
-				#TODO: priority battles. can't do with current auto-add rumble. 
-				#could make assumption that melee = 10 bots, and teams = 5, but not future compatible for things like 5vs5
-				#Need to modify client to send meleesize=(int)
-				#Or could set it manually for each rumble.
-				bq = structures.BotEntry.all()
-				bq.filter("Active =",True)
-				bq.filter("Rumble =",rumble)
-				bq.order("Battles")
-				bq.order("Pairings")
-				nextbot = None
-				for b in bq.fetch(limit = 1):
-					nextbot = b
-				
-				pq = structures.Pairing.all()
-				pq.filter("Uploader =",structures.total)
-				pq.filter("Active =",True)
-				pq.filter("Rumble =",rumble)
-				pq.filter("BotB =", nextbot.Name)
-				pq.order("Battles")
-				
-				shortPairs = []
-				for pair in pq.fetch(limit = 10):
-					shortPairs.append(pair)
-				if len(shortPairs) > 0:
-					index = 0
-					if len(shortPairs) > 1:
-						index = random.randint(0,len(shortPairs)-1)
-					
-					priopair = shortPairs[index]
-					priobots = [nextbot.Name, priopair.BotA]
-
-					priobots = [b.replace(' ','_') for b in priobots]
-					self.response.out.write("\n[" + string.join(priobots,",") + "]")
-
+			self.response.out.write("\nOK. " + bota + " vs " + botb + " received")
 			
-			self.response.out.write("\nOK. " + bota + " vs " + botb + " received.")
-
 			
 		else:
 			self.response.out.write("CLIENT NOT SUPPORTED")
+		
+		elapsed = time.time() - starttime
+		self.response.out.write(" in " + str(int(round(elapsed*1000))) + "ms")
 
 
 application = webapp.WSGIApplication([
