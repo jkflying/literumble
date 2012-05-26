@@ -1,6 +1,7 @@
 application: literumble
-version: 1
-runtime: python
+version: 2-4
+runtime: python27
+threadsafe: no
 api_version: 1
 
 handlers:
@@ -16,6 +17,12 @@ handlers:
 - url: .RemoveOldParticipant
   script: RemoveOldParticipant.py
 
+- url: .BotDetails
+  script: BotDetails.py
+
 - url: /favicon.ico
   static_files: favicon.ico
   upload: favicon.ico
+
+- url: /
+  script: RumbleSelect.py
