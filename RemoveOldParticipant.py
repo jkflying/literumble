@@ -50,6 +50,7 @@ def removeFromRumble(self,requests):
 	name = requests.get("name",None)
 	if name is None:
 		return "ERROR. no name specified"
+	name = name.replace("_"," ")
 	
 	rumble = memcache.get(game)
 	if rumble is None:
@@ -61,13 +62,15 @@ def removeFromRumble(self,requests):
 	if entry is None:
 		entry = structures.BotEntry.get_by_key_name(keyhash)
 	if entry is None:
-		return "ERROR. name/game combination does not exist: " + name + " " + game
+		return "ERROR. name/game combination does not exist: " + name + " / " + game
 		
 	entry.Active = False
 	pset = set(rumble.Participants)#avoid duplicates etc - a bit of spring cleaning
 	pset.discard(entry.Name)
 	
 	rumble.Participants = list(pset)
+	
+	memcache.delete("home")
 	
 	memcache.set(entry.key().name(),entry)
 	entry.put()
