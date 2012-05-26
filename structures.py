@@ -7,6 +7,7 @@ try:
 except:
     import simplejson as json
 import string
+import time
 
 from google.appengine.ext import db
 from google.appengine.api import users
@@ -14,6 +15,7 @@ from google.appengine.ext import webapp
 
 total = "TOTAL"
 participants = "PARTICIPANTS"
+sync = "SYNCHRONIZE"
 
 #class Pairing(db.Model):
 	##ABRU = db.StringProperty() --> key_name
@@ -33,6 +35,7 @@ class ScoreSet:
 		self.APS = aps
 		self.Survival = survival
 		self.Battles = battles
+		self.LastUpload = datetime.datetime.now()
 		
 #class CachedBot:
 	#def __init__ (self, bot):
@@ -55,10 +58,10 @@ class BotEntry(db.Model):
 	APS = db.FloatProperty(indexed = False)
 	Survival = db.FloatProperty(indexed = False)
 	PL = db.IntegerProperty(indexed = False)
-	Rumble = db.StringProperty()
+	Rumble = db.StringProperty(indexed = False)
 	LastUpload = db.DateTimeProperty(indexed = False)
-	Active = db.BooleanProperty()
-	PairingsList = db.TextProperty()
+	Active = db.BooleanProperty(indexed = False)
+	PairingsList = db.BlobProperty(indexed = False)
 
 class Uploader(db.Model):
 	#NC = db.StringProperty() --> key_name
