@@ -19,7 +19,9 @@ import structures
 class Rankings(webapp.RequestHandler):
 	def get(self):
 		starttime = time.time()
-		parts = self.request.query_string.split("&")
+		query = self.request.query_string
+		query = query.replace("%20"," ")
+		parts = query.split("&")
 		requests = {}
 		if parts[0] != "":
 			for pair in parts:
@@ -30,12 +32,23 @@ class Rankings(webapp.RequestHandler):
 		lim = int(requests.get("limit","10000000"))
 		ofst = int(requests.get("offset","0"))
 		order = requests.get("order","APS")
+		timing = bool(requests.get("timing",False))
 		
+		extraArgs = ""
+		
+		
+		if timing:
+			extraArgs += "&timing=1"
+			
+			
 		reverseSort = True
 		if order[0] == "-":
 			order = order[1:]
 			reverseSort = False
-			
+		if order == "Latest Battle":
+			order = "LastUpload"
+		elif order == "Competitor":
+			order = "Name"
 
 		rumble = memcache.get(game)
 		if rumble is None:
@@ -47,36 +60,69 @@ class Rankings(webapp.RequestHandler):
 
 		botHashes = [b + "|" + game for b in rumble.Participants]
 		rdict = memcache.get_multi(botHashes)
-		r = [rdict.get(h,None) for h in botHashes]
+		bots = [rdict.get(h,None) for h in botHashes]
 		missingHashes = []
 		missingIndexes = []
-		for i in range(len(r)):
-			if r[i] is None:
+		for i in xrange(len(bots)):
+			if bots[i] is None:
 				missingHashes.append(botHashes[i])
 				missingIndexes.append(i)
-		
-		rmis = structures.BotEntry.get_by_key_name(missingHashes)
-		for i in range(len(missingHashes)):
-			r[missingIndexes[i]] = rmis[i]
-		
-		bots = []
+		rmis = None
+		if len(missingHashes) > 0:
+			rmis = structures.BotEntry.get_by_key_name(missingHashes)
+			lost = False
+			botsdict = {}
+			for i in xrange(len(missingHashes)):
+				if rmis[i] is not None:
+					bots[missingIndexes[i]] = rmis[i]
+					botsdict[rmis[i].key().name()] = rmis[i]
+				else:
+					partSet = set(rumble.Participants)
+					partSet.discard(missingHashes[i])
+					rumble.Participants = list(partSet)
+					memcache.set(game,rumble)
+					rumble.put()
+					lost = True
+				
+			memcache.set_multi(botsdict)
+			if lost:
+				bots = filter(lambda b: b is not None, bots)
 
-		for bot in r:
-			bots.append(bot)
-
+			
+		for b in bots:
+			b.PWIN = round(1000.0*float(b.PL)/b.Pairings)*0.05 + 50
+			b.Survival = round(100.0*b.Survival)*0.01
+			b.APS = round(100.0*b.APS)*0.01
+			
 		
 		bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)
-
-		outstr = "<html>\n<body>RANKINGS - " + string.upper(game) + " WITH " + str(len(rumble.Participants)) + " BOTS<br>\n<table border=\"1\">\n<tr>"
-		headings = ["  ","Competitor","APS","PL","Survival","Pairings","Battles"]
+		
+		if	order == "LastUpload":
+			order = "Latest Battle"
+		elif order == "Name":
+			order = "Competitor"
+		outstr = "<html><head><title>LiteRumble - " + game + "</title></head>"
+		outstr += "\n<body>RANKINGS - " + string.upper(game) + " WITH " + str(len(rumble.Participants)) + " BOTS<br>\n<table border=\"1\">\n<tr>"
+		headings = ["  ","Competitor","APS","PWIN","Survival","Pairings","Battles","Latest Battle"]
 		for heading in headings:
-			outstr += "\n<th>" + heading + "</th>"
+			if order == heading and reverseSort:
+				heading = "-" + heading
+				
+			orderHref = botNameHref = "<a href=Rankings?game="+game+"&order="+ heading.replace(" ","%20") + extraArgs + ">"+heading+"</a>"
+			outstr += "\n<th>" + orderHref + "</th>"
 		outstr += "\n</tr>"
 		rank = 1
 		for bot in bots:
 			if rank > lim:
 				break
-			cells = [str(rank),bot.Name,bot.APS,bot.PL,bot.Survival,bot.Pairings,bot.Battles]
+			try:
+				lastUpload = bot.LastUpload
+			except:
+				lastUpload = datetime.datetime.now()
+			botName=bot.Name
+			botNameHref = "<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
+			
+			cells = [str(rank),botNameHref,bot.APS,bot.PWIN,bot.Survival,bot.Pairings,bot.Battles,lastUpload.strftime("%Y-%m-%d %H:%M:%S")]
 			line = "\n<tr>"
 			for cell in cells:
 				line += "\n<td>" + str(cell) + "</td>"
@@ -87,14 +133,11 @@ class Rankings(webapp.RequestHandler):
 			
 		outstr += "</table>"
 		elapsed = time.time() - starttime
-		outstr += "<br>\n Page served in " + str(int(round(elapsed*1000))) + "ms"
+		if timing:
+			outstr += "<br>\n Page served in " + str(int(round(elapsed*1000))) + "ms . Memcached additional " + str(len(missingHashes)) + " bots."
 		outstr += "</body></html>"
 		
-		if len(rmis) > 0:
-			botsdict = {}
-			for bot in rmis:
-				botsdict[bot.key().name()] = bot
-			memcache.set_multi(botsdict)
+
 			
 		self.response.out.write(outstr)
 
