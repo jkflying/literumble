@@ -16,6 +16,7 @@ from google.appengine.api import memcache
 from operator import attrgetter
 import random
 import time
+import zlib
 
 import structures
 
@@ -46,7 +47,7 @@ class UploadedResults(webapp.RequestHandler):
 				
 			if user is None:
 				user = structures.Uploader(key_name = uploader + "|" + client,
-				Name = uploader, Version = version, TotalUploads = 0)
+				Name = uploader, Client = client, Version = version, TotalUploads = 0)
 			
 			rumble = results["game"]
 			
@@ -101,8 +102,11 @@ class UploadedResults(webapp.RequestHandler):
 				if bots[i] is None:
 					bots[i] = structures.BotEntry(key_name = botHashes[i],
 							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
-							Survival = 0.0, PL = 0, Rumble = rumble, Active = True,
-							PairingsList = pickle.dumps([]))
+							Survival = 0.0, PL = 0, Rumble = rumble, Active = False,
+							PairingsList = zlib.compress(pickle.dumps([])))
+					
+				
+				if not bots[i].Active:
 					game.Participants.append(bd[i][0])
 					game.Participants = list(set(game.Participants))
 					self.response.out.write("Added " + bd[i][0] + " to " + rumble + "\n")
@@ -121,13 +125,13 @@ class UploadedResults(webapp.RequestHandler):
 			survivalb = 100.0*survivalb/game.Rounds
 			plista = None
 			try:
-				plista = pickle.loads(bots[0].PairingsList)
+				plista = pickle.loads(zlib.decompress(bots[0].PairingsList))
 			except:
 				plista = []
 			#assert bots[0].Pairings == len(plista)
 			
 			try:
-				plistb = pickle.loads(bots[1].PairingsList)
+				plistb = pickle.loads(zlib.decompress(bots[1].PairingsList))
 			except:
 				plistb = []
 				
@@ -143,7 +147,7 @@ class UploadedResults(webapp.RequestHandler):
 
 			bpair = None
 			for p in plistb:
-				if p.name == bota:
+				if p.Name == bota:
 					bpair = p
 			if bpair is None:
 				bpair = structures.ScoreSet(name = bota)
@@ -155,10 +159,10 @@ class UploadedResults(webapp.RequestHandler):
 			
 			totalBattles = apair.Battles
 			if totalBattles == 0:
-				bots[0].APS *= botaPairs/(botaPairs+1)
-				bots[0].Survival *= botaPairs/(botaPairs+1)
-				bots[1].APS *= botbPairs/(botbPairs+1)
-				bots[1].Survival *= botbPairs/(botbPairs+1)
+				bots[0].APS *= float(botaPairs)/(botaPairs+1)
+				bots[0].Survival *= float(botaPairs)/(botaPairs+1)
+				bots[1].APS *= float(botbPairs)/(botbPairs+1)
+				bots[1].Survival *= float(botbPairs)/(botbPairs+1)
 			else:
 				bots[0].APS -= apair.APS/botaPairs
 				bots[0].Survival -= apair.Survival/botaPairs
@@ -193,14 +197,18 @@ class UploadedResults(webapp.RequestHandler):
 				
 				bots[0].Pairings += 1
 				bots[1].Pairings += 1
+				memcache.delete("home")
 			else:
-				bots[0].APS += APSa/botaPairs
-				bots[0].Survival += survivala/botaPairs
-				bots[1].APS += APSb/botbPairs
-				bots[1].Survival += survivalb/botbPairs
+				bots[0].APS += apair.APS/botaPairs
+				bots[0].Survival += apair.Survival/botaPairs
+				bots[1].APS += bpair.APS/botbPairs
+				bots[1].Survival += bpair.Survival/botbPairs
 			
 			
 			participantsSet = set(game.Participants)
+			
+			apair.Battles += 1
+			bpair.Battles += 1
 			
 			for b in bots:
 				b.Battles += 1
@@ -217,6 +225,8 @@ class UploadedResults(webapp.RequestHandler):
 			game.TotalUploads += 1
 			
 			user.LastUpload = datetime.datetime.now()
+			apair.LastUpload = datetime.datetime.now()
+			bpair.LastUpload = datetime.datetime.now()
 			
 			pairingsarray = [plista,plistb]
 			for i in [0,1]:
@@ -225,9 +235,9 @@ class UploadedResults(webapp.RequestHandler):
 				while i < len(pairings):
 					if pairings[i].Name not in participantsSet:
 						pairings.pop(i)
-						b.Pairings = len(pairings)
+						#b.Pairings = len(pairings)
 					i += 1
-				b.PairingsList = pickle.dumps(pairings)
+				b.PairingsList = zlib.compress(pickle.dumps(pairings))
 				
 			self.response.out.write("<" + str(bots[0].Battles) + " " + str(bots[1].Battles) + ">")
 			
@@ -245,19 +255,19 @@ class UploadedResults(webapp.RequestHandler):
 					priopairs = plista
 				elif bots[0].Pairings > bots[1].Pairings:
 					priobot = bots[1]
-					priopair = plistb
+					priopairs = plistb
 				elif bots[0].Battles <= bots[1].Battles:
 					priobot = bots[0]
-					priopair = plista
+					priopairs = plista
 				else:
 					priobot = bots[1]
-					priopair = plistb
+					priopairs = plistb
 				
 				priobot2 = None
 				if priobot.Pairings < len(game.Participants):
 					#create the first battle of a new pairing
 					pairsdict = {}
-					for b in priopair:
+					for b in priopairs:
 						pairsdict[b.Name] = b
 					for p in game.Participants:
 						b = pairsdict.get(p,None)
@@ -272,7 +282,7 @@ class UploadedResults(webapp.RequestHandler):
 								
 				else:
 					#find the lowest battled pairing
-					priopair = sorted(priopair, key = lambda score: score.Battles)
+					priopairs = sorted(priopairs, key = lambda score: score.Battles)
 					pIndex = int(random.random()**3 * priobot.Pairings)
 					priobot2 = priopair[pIndex]
 					
@@ -281,22 +291,38 @@ class UploadedResults(webapp.RequestHandler):
 				self.response.out.write("\n[" + string.join(priobots,",") + "]")
 
 			for i in [0,1]:
-				bots[i].PairingsList = pickle.dumps(pairingsarray[i])
+				bots[i].PairingsList = zlib.compress(pickle.dumps(pairingsarray[i]))
 			
-			try:
-				botdict = {}
-				for b in bots:
-					botdict[b.key().name()] = b
-				memcache.set_multi(botdict)
+			
+			sync = memcache.get(rumble + "|" + structures.sync)
+			if sync is None:
+				sync = []
+			
+			sync += [b.key().name() for b in bots]
+			uploadsize = None
+			if game.Melee:
+				uploadsize = 135*2*2
+			else:
+				uploadsize = 10*2*2
 				
-				memcache.set(user.key().name(),user)
-				memcache.set(game.Name,game)
-				
-				db.put(bots)
+			botdict = {}
+			for b in bots:
+				botdict[b.key().name()] = b
+			memcache.set_multi(botdict)
+			
+			memcache.set(user.key().name(),user)
+			memcache.set(game.Name,game)
+
+			if len(sync) >= uploadsize:
+				syncset = list(set(sync))
+				syncbotsDict = memcache.get_multi(syncset)
+				syncbots = syncbotsDict.values()
+				db.put(syncbots)
 				user.put()
 				game.put()
-			except:
-				self.response.out.write("ERROR PUTTING PAIRS DATA \r\n")
+				memcache.set(rumble + "|" + structures.sync,[])
+			else:
+				memcache.set(rumble + "|" + structures.sync,sync)
 			
 			self.response.out.write("\nOK. " + bota + " vs " + botb + " received")
 			
