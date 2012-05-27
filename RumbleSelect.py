@@ -37,11 +37,11 @@ class RumbleSelect(webapp.RequestHandler):
 		extraArgs = ""
 		
 		
-		if timing:
-			extraArgs += "&timing=1"
+		#if timing:
+		extraArgs += "&timing=1"
 		
 		outstr = memcache.get("home")
-		if outstr is None:
+		if outstr is None or timing:
 			
 			#gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
 			outstr = "<html><head><title>LiteRumble - Home</title></head>LiteRumble - Home<br>\n"
@@ -69,7 +69,8 @@ class RumbleSelect(webapp.RequestHandler):
 				outstr += "<br><br>"
 			
 			outstr += "</table>"
-			memcache.set("home",outstr)
+			if not timing:
+				memcache.set("home",outstr)
 			
 		elapsed = time.time() - starttime
 		if timing:

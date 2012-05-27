@@ -30,12 +30,12 @@ sync = "SYNCHRONIZE"
 	#Active = db.BooleanProperty()
 
 class ScoreSet:
-	def __init__ (self, name = "", aps = 0.0, survival = 0.0, battles = 0):
+	def __init__ (self, name = "", aps = 0.0, survival = 0.0, battles = 0, lastUpload = datetime.datetime.now()):
 		self.Name = name
 		self.APS = aps
 		self.Survival = survival
 		self.Battles = battles
-		self.LastUpload = datetime.datetime.now()
+		self.LastUpload = lastUpload.strftime("%Y-%m-%d %H:%M:%S")
 		
 #class CachedBot:
 	#def __init__ (self, bot):

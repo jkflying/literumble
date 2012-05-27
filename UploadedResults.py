@@ -103,7 +103,7 @@ class UploadedResults(webapp.RequestHandler):
 					bots[i] = structures.BotEntry(key_name = botHashes[i],
 							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
 							Survival = 0.0, PL = 0, Rumble = rumble, Active = False,
-							PairingsList = zlib.compress(pickle.dumps([])))
+							PairingsList = zlib.compress(json.dumps([])))
 					
 				
 				if not bots[i].Active:
@@ -125,13 +125,29 @@ class UploadedResults(webapp.RequestHandler):
 			survivalb = 100.0*survivalb/game.Rounds
 			plista = None
 			try:
-				plista = pickle.loads(zlib.decompress(bots[0].PairingsList))
+				try:
+					botsDicts = json.loads(zlib.decompress(bots[0].PairingsList))
+					plista = [structures.ScoreSet() for _ in xrange(len(botsDicts))]
+					for s,d in zip(plista,botsDicts):
+						s.__dict__.update(d)
+				except:
+					plista = pickle.loads(zlib.decompress(bots[0].PairingsList))
+					for b in plista:
+						b.LastUpload = b.LastUpload.strftime("%Y-%m-%d %H:%M:%S")
 			except:
 				plista = []
 			#assert bots[0].Pairings == len(plista)
 			
 			try:
-				plistb = pickle.loads(zlib.decompress(bots[1].PairingsList))
+				try:
+					botsDicts = json.loads(zlib.decompress(bots[1].PairingsList))
+					plistb = [structures.ScoreSet() for _ in xrange(len(botsDicts))]
+					for s,d in zip(plistb,botsDicts):
+						s.__dict__.update(d)
+				except:
+					plistb = pickle.loads(zlib.decompress(bots[1].PairingsList))
+					for b in plistb:
+						b.LastUpload = b.LastUpload.strftime("%Y-%m-%d %H:%M:%S")
 			except:
 				plistb = []
 				
@@ -237,7 +253,7 @@ class UploadedResults(webapp.RequestHandler):
 						pairings.pop(i)
 						#b.Pairings = len(pairings)
 					i += 1
-				b.PairingsList = zlib.compress(pickle.dumps(pairings))
+				#b.PairingsList = zlib.compress(pickle.dumps(pairings))
 				
 			self.response.out.write("<" + str(bots[0].Battles) + " " + str(bots[1].Battles) + ">")
 			
@@ -290,20 +306,28 @@ class UploadedResults(webapp.RequestHandler):
 				priobots = [b.replace(' ','_') for b in priobots]
 				self.response.out.write("\n[" + string.join(priobots,",") + "]")
 
-			for i in [0,1]:
-				bots[i].PairingsList = zlib.compress(pickle.dumps(pairingsarray[i]))
+			for b in bots:
+				
+				b.PairingsList = zlib.compress(json.dumps(pairingsarray[i].__dict__),9)
 			
 			
 			sync = memcache.get(rumble + "|" + structures.sync)
 			if sync is None:
-				sync = []
+				sync = {}
+			else:
+				sync = json.loads(sync)
 			
-			sync += [b.key().name() for b in bots]
+			for b in bots:
+				key = b.key().name()
+				sync[key] = sync.get(key,0) + 1
+
 			uploadsize = None
 			if game.Melee:
-				uploadsize = 135*2*2
+				uploadsize = game.MeleeSize - 1
 			else:
-				uploadsize = 10*2*2
+				uploadsize = 10*2
+			
+			updates = max(sync.values())
 				
 			botdict = {}
 			for b in bots:
@@ -313,16 +337,31 @@ class UploadedResults(webapp.RequestHandler):
 			memcache.set(user.key().name(),user)
 			memcache.set(game.Name,game)
 
-			if len(sync) >= uploadsize:
-				syncset = list(set(sync))
+			if (game.Melee and updates >= uploadsize and len(sync) >= game.MeleeSize) or (not game.Melee and len(sync) > uploadsize):
+				syncset = sync.keys()
+				if game.Melee:
+					syncset = filter(lambda b: sync[b] >= uploadsize,syncset)
 				syncbotsDict = memcache.get_multi(syncset)
 				syncbots = syncbotsDict.values()
-				db.put(syncbots)
-				user.put()
-				game.put()
-				memcache.set(rumble + "|" + structures.sync,[])
+				sizelim = 800000
+				while len(syncbots) > 0:
+					size = 0
+					thisput = []
+					while len(syncbots) > 0:
+						b = syncbots[-1]
+						l = len(b.PairingsList)#the big one
+						if l+size > sizelim:
+							break
+						size += l
+						syncbots.pop(-1)
+						thisput.append(b)
+						sync.pop(b.key().name(),1)
+					db.put(thisput)
+					
+				db.put([user, game])
+				memcache.set(rumble + "|" + structures.sync,json.dumps(sync))
 			else:
-				memcache.set(rumble + "|" + structures.sync,sync)
+				memcache.set(rumble + "|" + structures.sync,json.dumps(sync))
 			
 			self.response.out.write("\nOK. " + bota + " vs " + botb + " received")
 			

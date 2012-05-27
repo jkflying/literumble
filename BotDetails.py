@@ -82,8 +82,21 @@ class BotDetails(webapp.RequestHandler):
 				memcache.set(keyhash,entry)
 		if entry is None:
 			return "ERROR. name/game combination does not exist: " + name + " " + game
-		
-		bots = pickle.loads(zlib.decompress(entry.PairingsList))
+		bots = None
+		try:
+			botsDicts = json.loads(zlib.decompress(entry.PairingsList))
+			bots = [structures.ScoreSet() for _ in xrange(len(botsDicts))]
+			for s,d in zip(bots,botsDicts):
+				s.__dict__.update(d)
+		except:
+			bots = pickle.loads(zlib.decompress(entry.PairingsList))
+			for b in bots:
+				b.LastUpload = b.LastUpload.strftime("%Y-%m-%d %H:%M:%S")
+				
+			dbots = [b.__dict__ for b in bots]
+			entry.PairingsList = zlib.compress(json.dumps(dbots),9)
+			memcache.set(keyhash,entry)
+			#self.response.out.write("Updated to JSON")
 			
 		for b in bots:
 			b.Survival = round(100.0*b.Survival)*0.01
@@ -101,7 +114,7 @@ class BotDetails(webapp.RequestHandler):
 			order = "Latest Battle"
 		
 		gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
-		outstr = "<html><head><title>LiteRumble - " + game + "</head>"
+		outstr = "<html><head><title>LiteRumble - " + game + "</title></head>"
 		outstr += "\n<body>Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " + str(len(bots)) + " bots.<br>\n<table border=\"1\">\n<tr>"
 
 		headings = ["  ",
@@ -125,7 +138,7 @@ class BotDetails(webapp.RequestHandler):
 
 			botName=bot.Name
 			botNameHref = "<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
-			cells = [str(rank),botNameHref,bot.APS,bot.Survival,bot.Battles,bot.LastUpload.strftime("%Y-%m-%d %H:%M:%S")]
+			cells = [str(rank),botNameHref,bot.APS,bot.Survival,bot.Battles,bot.LastUpload]
 			line = "\n<tr>"
 			for cell in cells:
 				line += "\n<td>" + str(cell) + "</td>"
