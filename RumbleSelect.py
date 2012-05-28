@@ -32,19 +32,21 @@ class RumbleSelect(webapp.RequestHandler):
 				requests[ab[0]] = ab[1]
 		
 		timing = bool(requests.get("timing",False))
+		regen = bool(requests.get("regen",False))
 		
 		
 		extraArgs = ""
 		
 		
-		#if timing:
-		extraArgs += "&timing=1"
+		if timing:
+			extraArgs += "&timing=1"
 		
 		outstr = memcache.get("home")
-		if outstr is None or timing:
+		if outstr is None or regen:
 			
 			#gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
-			outstr = "<html><head><title>LiteRumble - Home</title></head>LiteRumble - Home<br>\n"
+			out = []
+			out.append(  "<html><head><title>LiteRumble - Home</title></head>LiteRumble - Home<br>\n")
 			q = structures.Rumble.all()
 			
 			rumbles = [[],[],[]]
@@ -60,15 +62,16 @@ class RumbleSelect(webapp.RequestHandler):
 			
 			for cat,rumbs in zip(categories,rumbles):
 				rumbs.sort(key = lambda r: -len(r.Participants))
-				outstr += "<table border=\"1\">\n<tr>"
-				outstr += "\n<th>" + cat + "</th><th>Participants</th>\n</tr>"
+				out.append(  "<table border=\"1\">\n<tr>")
+				out.append(  "\n<th>" + cat + "</th><th>Participants</th>\n</tr>")
 				for r in rumbs:
 					game = r.Name
 					gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
-					outstr += "\n<tr><td>" + gameHref + "</td><td>" + str(len(r.Participants)) + "</td></tr>"
-				outstr += "<br><br>"
+					out.append( "\n<tr><td>" + gameHref + "</td><td>" + str(len(r.Participants)) + "</td></tr>")
+				out.append(  "<br><br>")
 			
-			outstr += "</table>"
+			out.append(  "</table>")
+			outstr = string.join(out,"")
 			if not timing:
 				memcache.set("home",outstr)
 			

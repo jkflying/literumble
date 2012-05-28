@@ -72,6 +72,7 @@ def removeFromRumble(self,requests):
 	
 	memcache.delete("home")
 	
+	memcache.set(entry.key().name() + "|lite", structures.LiteBot(entry))
 	memcache.set(entry.key().name(),entry)
 	entry.put()
 	

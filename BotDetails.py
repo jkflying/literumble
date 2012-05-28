@@ -62,24 +62,17 @@ class BotDetails(webapp.RequestHandler):
 			reverseSort = False
 		if order == "Latest Battle":
 			order = "LastUpload"
-		#if order == "Name":
-			#reverseSort = not reverseSort
-
-		rumble = memcache.get(game)
-		if rumble is None:
-			rumble = structures.Rumble.get_by_key_name(game)
-			if rumble is not None:
-				memcache.set(game,rumble)
-		if rumble is None:
-			self.response.out.write("RUMBLE NOT FOUND")
-			return
 		
+		parsetime = time.time() - starttime
+		
+		cached = True
 		keyhash = name + "|" + game
 		entry = memcache.get(keyhash)
 		if entry is None:
 			entry = structures.BotEntry.get_by_key_name(keyhash)
 			if entry is not None:
 				memcache.set(keyhash,entry)
+				cached = False
 		if entry is None:
 			return "ERROR. name/game combination does not exist: " + name + " " + game
 		bots = None
@@ -91,13 +84,18 @@ class BotDetails(webapp.RequestHandler):
 		except:
 			bots = pickle.loads(zlib.decompress(entry.PairingsList))
 			for b in bots:
-				b.LastUpload = b.LastUpload.strftime("%Y-%m-%d %H:%M:%S")
+				if b.__dict__.get("LastUpload",None) is not None:
+					b.LastUpload = b.LastUpload.strftime("%Y-%m-%d %H:%M:%S")
+				else:
+					b.__dict__["LastUpload"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 				
 			dbots = [b.__dict__ for b in bots]
-			entry.PairingsList = zlib.compress(json.dumps(dbots),9)
+			entry.PairingsList = zlib.compress(json.dumps(dbots),4)
 			memcache.set(keyhash,entry)
 			#self.response.out.write("Updated to JSON")
-			
+		
+		retrievetime = time.time() - parsetime - starttime
+		
 		for b in bots:
 			b.Survival = round(100.0*b.Survival)*0.01
 			b.APS = round(100.0*b.APS)*0.01
@@ -109,13 +107,15 @@ class BotDetails(webapp.RequestHandler):
 
 		bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)
 		
-				
+		sorttime = time.time() - retrievetime - parsetime - starttime
 		if order == "LastUpload":
 			order = "Latest Battle"
 		
+		out = []
+		
 		gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
-		outstr = "<html><head><title>LiteRumble - " + game + "</title></head>"
-		outstr += "\n<body>Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " + str(len(bots)) + " bots.<br>\n<table border=\"1\">\n<tr>"
+		out.append( "<html><head><title>LiteRumble - " + game + "</title></head>")
+		out.append( "\n<body>Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " + str(len(bots)) + " bots.<br>\n<table border=\"1\">\n<tr>")
 
 		headings = ["  ",
 		"Name",
@@ -125,12 +125,15 @@ class BotDetails(webapp.RequestHandler):
 		"Latest Battle"]
 		
 		for heading in headings:
+			sortedBy = order == heading
 			if order == heading and reverseSort:
 				heading = "-" + heading
 				
 			orderHref = botNameHref = "<a href=BotDetails?game="+game+"&name="+name.replace(" ","%20")+"&order="+ heading.replace(" ","%20") + extraArgs + ">"+heading+"</a>"
-			outstr += "\n<th>" + orderHref + "</th>"
-		outstr += "\n</tr>"
+			if sortedBy:
+				orderHref = "<i>" + orderHref + "</i>"
+			out.append(  "\n<th>" + orderHref + "</th>")
+		out.append(  "\n</tr>")
 		rank = 1
 		for bot in bots:
 			if rank > lim:
@@ -139,21 +142,25 @@ class BotDetails(webapp.RequestHandler):
 			botName=bot.Name
 			botNameHref = "<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
 			cells = [str(rank),botNameHref,bot.APS,bot.Survival,bot.Battles,bot.LastUpload]
-			line = "\n<tr>"
+			out.append( "\n<tr>")
 			for cell in cells:
-				line += "\n<td>" + str(cell) + "</td>"
-			line += "\n</tr>"
+				out.append(  "\n<td>" + str(cell) + "</td>")
+			out.append( "\n</tr>")
 			
-			outstr += line
 			rank += 1
 			
-		outstr += "</table>"
+		out.append(  "</table>")
+		htmltime = time.time() - sorttime - retrievetime - parsetime - starttime 
 		elapsed = time.time() - starttime
 		if timing:
-			outstr += "<br>\n Page served in " + str(int(round(elapsed*1000))) + "ms."
-		outstr += "</body></html>"
+			out.append(  "<br>\n Page served in " + str(int(round(elapsed*1000))) + "ms. Bot cached: " + str(cached))
+			out.append("\n<br> parsing: " + str(int(round(parsetime*1000))) )
+			out.append("\n<br> retrieve: " + str(int(round(retrievetime*1000))) )
+			out.append("\n<br> sort: " + str(int(round(sorttime*1000))) )
+			out.append("\n<br> html generation: " + str(int(round(htmltime*1000))) )
+		out.append(  "</body></html>")
 		
-
+		outstr = string.join(out,"")
 			
 		self.response.out.write(outstr)
 

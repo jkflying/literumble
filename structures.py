@@ -30,26 +30,28 @@ sync = "SYNCHRONIZE"
 	#Active = db.BooleanProperty()
 
 class ScoreSet:
-	def __init__ (self, name = "", aps = 0.0, survival = 0.0, battles = 0, lastUpload = datetime.datetime.now()):
+	def __init__ (self, name = "", aps = 0.0, survival = 0.0, battles = 0, lastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
 		self.Name = name
 		self.APS = aps
 		self.Survival = survival
 		self.Battles = battles
-		self.LastUpload = lastUpload.strftime("%Y-%m-%d %H:%M:%S")
+		self.LastUpload = lastUpload
 		
-#class CachedBot:
-	#def __init__ (self, bot):
-		#self.Name = bot.Name
-		#self.Battles = bot.Battles
-		#self.Pairings = bot.Pairings
-		#self.APS = bot.APS
-		#self.Survival = bot.Survival
-		#self.PL = bot.PL
-		#self.Rumble = bot.Rumble
-		#self.LastUpload = bot.LastUpload
-		#self.Active = bot.Active
-		#self.PairingsDict = pickle.loabot.PairingsDict
-
+class LiteBot:
+	#def __init__(self):
+		
+	def __init__ (self, bot):
+		self.Name = bot.Name
+		self.Battles = bot.Battles
+		self.Pairings = bot.Pairings
+		self.APS = bot.APS
+		self.Survival = bot.Survival
+		self.PL = bot.PL
+		self.Rumble = bot.Rumble
+		self.LastUpload = bot.LastUpload
+		self.Active = bot.Active
+		
+		
 class BotEntry(db.Model):
 	#NR = db.StringProperty() --> key_name
 	Name = db.StringProperty(indexed = False)
@@ -59,7 +61,7 @@ class BotEntry(db.Model):
 	Survival = db.FloatProperty(indexed = False)
 	PL = db.IntegerProperty(indexed = False)
 	Rumble = db.StringProperty(indexed = False)
-	LastUpload = db.DateTimeProperty(indexed = False)
+	LastUpload = db.StringProperty(indexed = False)
 	Active = db.BooleanProperty(indexed = False)
 	PairingsList = db.BlobProperty(indexed = False)
 
@@ -80,4 +82,5 @@ class Rumble(db.Model):
 	Name = db.StringProperty(indexed = False) # key_name
 	TotalUploads = db.IntegerProperty(indexed = False)
 	Participants = db.StringListProperty(indexed = False) 
+	AvgBattles = db.FloatProperty(indexed = False, default = 0.0)
 
