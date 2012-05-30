@@ -79,14 +79,15 @@ class Rankings(webapp.RequestHandler):
 			botsdict = {}
 			for i in xrange(len(missingHashes)):
 				if rmis[i] is not None:
+					rmis[i].PairingsList = None
 					bots[missingIndexes[i]] = rmis[i]
 					botsdict[rmis[i].key().name()] = rmis[i]
 				else:
-					partSet = set(rumble.Participants)
-					partSet.discard(missingHashes[i])
-					rumble.Participants = list(partSet)
-					memcache.set(game,rumble)
-					rumble.put()
+					#partSet = set(rumble.Participants)
+					#partSet.discard(missingHashes[i])
+					#rumble.Participants = list(partSet)
+					#memcache.set(game,rumble)
+					#rumble.put()
 					lost = True
 					
 			memcache.set_multi(botsdict)
@@ -119,8 +120,16 @@ class Rankings(webapp.RequestHandler):
 			sortedBy = order == heading
 			if order == heading and reverseSort:
 				heading = "-" + heading
-				
-			orderHref = "<a href=Rankings?game="+game+"&order="+ heading.replace(" ","%20") + extraArgs + ">"+heading+"</a>"
+			orderl = []
+			orderl.append("<a href=Rankings?game=")
+			orderl.append(game)
+			orderl.append("&order=")
+			orderl.append(heading.replace(" ","%20"))
+			orderl.append(extraArgs)
+			orderl.append(">")
+			orderl.append(heading)
+			orderl.append("</a>")
+			orderHref = ''.join(orderl)
 			if sortedBy:
 				orderHref = "<i>" + orderHref + "</i>"
 			out.append( "\n<th>" + orderHref + "</th>")
@@ -131,12 +140,23 @@ class Rankings(webapp.RequestHandler):
 				break
 				
 			botName=bot.Name
-			botNameHref = "<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
+			bnh = []
+			bnh.append("<a href=BotDetails?game=")
+			bnh.append(game)
+			bnh.append("&name=")
+			bnh.append(botName.replace(" ","%20"))
+			bnh.append(extraArgs)
+			bnh.append(">")
+			bnh.append(botName)
+			bnh.append("</a")
+			botNameHref = ''.join(bnh) #"<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
 			
 			cells = [str(rank),botNameHref,bot.APS,bot.PWIN,bot.VoteScore,bot.Survival,bot.Pairings,bot.Battles,bot.LastUpload]
 			out.append("\n<tr>")
 			for cell in cells:
-				out.append( "\n<td>" + str(cell) + "</td>")
+				out.append( "\n<td>")
+				out.append(str(cell))
+				out.append("</td>")
 			out.append("\n</tr>")
 			
 			rank += 1

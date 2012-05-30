@@ -61,14 +61,15 @@ class RatingsFile(webapp.RequestHandler):
 			botsdict = {}
 			for i in xrange(len(missingHashes)):
 				if rmis[i] is not None:
+					rmsi[i].PairingsList = None
 					r[missingIndexes[i]] = rmis[i]
-					botsdict[rmis[i].key().name()] = rmis[i]
+					botsdict[missingHashes[i]] = rmis[i]
 				else:
-					partSet = set(rumble.Participants)
-					partSet.discard(missingHashes[i])
-					rumble.Participants = list(partSet)
-					memcache.set(game,rumble)
-					rumble.put()
+					#partSet = set(rumble.Participants)
+					#partSet.discard(missingHashes[i])
+					#rumble.Participants = list(partSet)
+					#memcache.set(game,rumble)
+					#rumble.put()
 					lost = True
 									
 			memcache.set_multi(botsdict)

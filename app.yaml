@@ -1,32 +1,32 @@
 application: literumble
-version: 2-7
+version: 2-8
 runtime: python27
-threadsafe: no
+threadsafe: yes
 api_version: 1
 
 handlers:
 - url: .UploadedResults
-  script: UploadedResults.py
+  script: UploadedResults.application
 
 - url: .Rankings
-  script: Rankings.py
+  script: Rankings.application
   
 - url: .RatingsFile
-  script: RatingsFile.py
+  script: RatingsFile.application
   
 - url: .RemoveOldParticipant
-  script: RemoveOldParticipant.py
+  script: RemoveOldParticipant.application
 
 - url: .BotDetails
-  script: BotDetails.py
+  script: BotDetails.application
 
 - url: /favicon.ico
   static_files: favicon.ico
   upload: favicon.ico
 
 - url: /
-  script: RumbleSelect.py
+  script: RumbleSelect.application
   
 - url: .BatchRankings
-  script: BatchRankings.py
-#  login: admin
+  script: BatchRankings.application
+  login: admin

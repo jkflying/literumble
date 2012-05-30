@@ -62,7 +62,7 @@ def removeFromRumble(self,requests):
 	if entry is None:
 		entry = structures.BotEntry.get_by_key_name(keyhash)
 	if entry is None:
-		return "ERROR. name/game combination does not exist: " + name + " / " + game
+		return "ERROR. game does not exist: " + game
 		
 	entry.Active = False
 	pset = set(rumble.Participants)#avoid duplicates etc - a bit of spring cleaning

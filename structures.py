@@ -84,4 +84,5 @@ class Rumble(db.Model):
 	TotalUploads = db.IntegerProperty(indexed = False)
 	Participants = db.StringListProperty(indexed = False) 
 	AvgBattles = db.FloatProperty(indexed = False, default = 0.0)
+	PriorityBattles = db.BooleanProperty(indexed = False, default = True)
 

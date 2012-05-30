@@ -229,13 +229,13 @@ class UploadedResults(webapp.RequestHandler):
 				
 			self.response.out.write("<" + str(bots[0].Battles) + " " + str(bots[1].Battles) + ">")
 			
-			game.__dict__["AvgBattles"] = game.__dict__.get("AvgBattles",0.0) * 0.99 + 0.005 * (bots[0].Pairings + bots[1].Pairings)
+			game.AvgBattles = game.AvgBattles * 0.99 + 0.005 * (bots[0].Pairings + bots[1].Pairings)
 			
 			scorestime = time.time() - retrievetime - starttime
 			
-			if not game.Melee or min(pairingsarray, key = lambda plist: min(plist, key = lambda p: p.Battles)) < game.AvgBattles:
+			if game.PriorityBattles and ((not game.Melee and random.random() < 0.9) or min(pairingsarray, key = lambda plist: min(plist, key = lambda p: p.Battles)) < game.AvgBattles):
 				#do a gradient descent to the lowest battled pairings
-				#1: take the bot of this pair which has less battles
+				#1: take the bot of this pair which has less pairings/battles
 				#2: find an empty pairing or take a low pairing
 				#3: ????
 				#4: PROFIT!!!
@@ -244,16 +244,16 @@ class UploadedResults(webapp.RequestHandler):
 				priopairs = None
 				if bots[0].Pairings < bots[1].Pairings:
 					priobot = bots[0]
-					priopairs = plista
+					priopairs = pairingsarray[0]
 				elif bots[0].Pairings > bots[1].Pairings:
 					priobot = bots[1]
-					priopairs = plistb
+					priopairs = pairingsarray[1]
 				elif bots[0].Battles <= bots[1].Battles:
 					priobot = bots[0]
-					priopairs = plista
+					priopairs = pairingsarray[0]
 				else:
 					priobot = bots[1]
-					priopairs = plistb
+					priopairs = pairingsarray[1]
 				
 				priobot2 = None
 				if priobot.Pairings < len(game.Participants):
@@ -263,7 +263,7 @@ class UploadedResults(webapp.RequestHandler):
 						pairsdict[b.Name] = b
 					for p in game.Participants:
 						b = pairsdict.get(p,None)
-						if b is None:
+						if b is None and p != priobot.Name:
 							priobot2 = memcache.get(p + "|" + rumble)
 							if priobot2 is None:
 								priobot2 = structures.BotEntry.get_by_key_name(p + "|" + rumble)
@@ -275,12 +275,15 @@ class UploadedResults(webapp.RequestHandler):
 				else:
 					#find the lowest battled pairing
 					priopairs = sorted(priopairs, key = lambda score: score.Battles)
-					pIndex = int(random.random()**3 * priobot.Pairings)
-					priobot2 = priopair[pIndex]
-					
-				priobots = [priobot.Name,priobot2.Name]
-				priobots = [b.replace(' ','_') for b in priobots]
-				self.response.out.write("\n[" + string.join(priobots,",") + "]")
+					while priobot2 is None:
+						pIndex = int(random.random()**3 * priobot.Pairings)
+						if priopair[pIndex].Name != priobot.Name:
+							priobot2 = priopair[pIndex]
+						
+				if priobot is not None and priobot2 is not None:	
+					priobots = [priobot.Name,priobot2.Name]
+					priobots = [b.replace(' ','_') for b in priobots]
+					self.response.out.write("\n[" + string.join(priobots,",") + "]")
 			
 
 			priotime = time.time() - scorestime - retrievetime - starttime
@@ -338,7 +341,7 @@ class UploadedResults(webapp.RequestHandler):
 					thisput = []
 					while len(syncbots) > 0:
 						b = syncbots[-1]
-						l = len(pickle.dumps(b,pickle.HIGHEST_PROTOCOL))
+						l = len(pickle.dumps(b,-1))
 						if l+size > sizelim:
 							break
 						size += l
