@@ -46,28 +46,9 @@ class RatingsFile(webapp.RequestHandler):
 			return
 		
 		botHashes = [b + "|" + game for b in rumble.Participants]
-		bots = None
-		missingLite = False
+		bdict = memcache.get_multi(botHashes)
+		r = [bdict.get(h,None) for h in botHashes]
 
-		litebotHashes = [h + "|lite" for h in botHashes]
-		lbdict = memcache.get_multi(litebotHashes)
-		bots = [lbdict.get(h,None) for h in litebotHashes]
-
-
-				
-		if None in bots:
-			missingHashes = []
-			missingIndexes = []
-			for i in xrange(len(bots)):
-				if bots[i] is None:
-					missingHashes.append(botHashes[i])
-					missingIndexes.append(i)
-			rdict = memcache.get_multi(missingHashes)
-			for key in rdict:
-				bots[missingIndexes[missingHashes.index(key)]] = rdict[key]
-			missingLite = True
-				
-		r = bots
 		missingHashes = []
 		missingIndexes = []
 		for i in xrange(len(r)):
@@ -94,13 +75,6 @@ class RatingsFile(webapp.RequestHandler):
 			if lost:
 				r = filter(lambda b: b is not None, r)
 
-		if missingLite:
-			lbots = [structures.LiteBot(b) for b in r]
-			lbotKeys = [b.Name + "|" + game + "|lite" for b in lbots]
-			lbdict = {}
-			for lbot, key in zip(lbots,lbotKeys):
-				lbdict[key] = lbot
-			memcache.set_multi(lbdict)
 			
 		out = []
 		for bot in r:

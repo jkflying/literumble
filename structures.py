@@ -37,19 +37,19 @@ class ScoreSet:
 		self.Battles = battles
 		self.LastUpload = lastUpload
 		
-class LiteBot:
-	#def __init__(self):
+#class LiteBot:
+	##def __init__(self):
 		
-	def __init__ (self, bot):
-		self.Name = bot.Name
-		self.Battles = bot.Battles
-		self.Pairings = bot.Pairings
-		self.APS = bot.APS
-		self.Survival = bot.Survival
-		self.PL = bot.PL
-		self.Rumble = bot.Rumble
-		self.LastUpload = bot.LastUpload
-		self.Active = bot.Active
+	#def __init__ (self, bot):
+		#self.Name = bot.Name
+		#self.Battles = bot.Battles
+		#self.Pairings = bot.Pairings
+		#self.APS = bot.APS
+		#self.Survival = bot.Survival
+		#self.PL = bot.PL
+		#self.Rumble = bot.Rumble
+		#self.LastUpload = bot.LastUpload
+		#self.Active = bot.Active
 		
 		
 class BotEntry(db.Model):
@@ -60,6 +60,7 @@ class BotEntry(db.Model):
 	APS = db.FloatProperty(indexed = False)
 	Survival = db.FloatProperty(indexed = False)
 	PL = db.IntegerProperty(indexed = False)
+	VoteScore = db.FloatProperty(indexed = False,default = 0.0)
 	Rumble = db.StringProperty(indexed = False)
 	LastUpload = db.StringProperty(indexed = False)
 	Active = db.BooleanProperty(indexed = False)

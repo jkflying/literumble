@@ -26,3 +26,7 @@ handlers:
 
 - url: /
   script: RumbleSelect.py
+  
+- url: .BatchRankings
+  script: BatchRankings.py
+#  login: admin

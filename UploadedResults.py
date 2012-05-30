@@ -39,16 +39,6 @@ class UploadedResults(webapp.RequestHandler):
 		
 		version = results["version"]
 		if version in allowed_versions and client in allowed_clients:
-			#uploader = results["user"]
-			
-			#user = memcache.get(uploader + "|" + client)
-			#if user is None:
-				#user = structures.Uploader.get_by_key_name(uploader + "|" + client)
-				
-			#if user is None:
-				#user = structures.Uploader(key_name = uploader + "|" + client,
-				#Name = uploader, Client = client, Version = version, TotalUploads = 0)
-			
 			rumble = results["game"]
 			
 			game = memcache.get(rumble)
@@ -90,11 +80,14 @@ class UploadedResults(webapp.RequestHandler):
 			bd = [[bota, rumble], [botb, rumble]]
 			
 			botHashes = [string.join(a,"|") for a in bd]
-			botdict = memcache.get_multi(botHashes)
+			botPairingsHashes = [h + "|pairings" for h in botHashes]
+			botdict = memcache.get_multi(botHashes + botPairingsHashes)
 			bots = [botdict.get(h,None) for h in botHashes]
-		
+			pairsZip = [botdict.get(h,None) for h in botPairingsHashes]
+			
+			pairingsarray = [[],[]]
 			for i in [0, 1]:
-				if bots[i] is None:
+				if bots[i] is None or pairsZip[i] is None:
 					bots[i] = structures.BotEntry.get_by_key_name(botHashes[i])
 					#if bots[i] is not None:
 					#	memcache.set(botHashes[i], bots[i])
@@ -103,15 +96,27 @@ class UploadedResults(webapp.RequestHandler):
 					bots[i] = structures.BotEntry(key_name = botHashes[i],
 							Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
 							Survival = 0.0, PL = 0, Rumble = rumble, Active = False,
-							PairingsList = zlib.compress(json.dumps([])))
+							PairingsList = zlib.compress(json.dumps([]),5))
 					newBot = True
+				
+				pairsDicts = None
+				if pairsZip[i] is None:
+					pairsDicts = json.loads(zlib.decompress(bots[i].PairingsList))
+				else:
+					pairsDicts =  json.loads(zlib.decompress(pairsZip[i]))
+				
+				pairingsarray[i] = [structures.ScoreSet() for _ in pairsDicts]
+				for s,d in zip(pairingsarray[i],pairsDicts):
+					s.__dict__.update(d)
 				
 				if not bots[i].Active:
 					game.Participants.append(bd[i][0])
 					game.Participants = list(set(game.Participants))
+					newBot = True
 					self.response.out.write("Added " + bd[i][0] + " to " + rumble + "\n")
-					
 			
+					
+			retrievetime = time.time() - starttime
 			
 			scorea = float(results["fscore"])
 			scoreb = float(results["sscore"])
@@ -123,46 +128,26 @@ class UploadedResults(webapp.RequestHandler):
 			
 			survivala = 100.0*survivala/game.Rounds
 			survivalb = 100.0*survivalb/game.Rounds
-			plista = None
-			try:
-				botsDicts = json.loads(zlib.decompress(bots[0].PairingsList))
-				plista = [structures.ScoreSet() for _ in xrange(len(botsDicts))]
-				for s,d in zip(plista,botsDicts):
-					s.__dict__.update(d)
-			except:
-				plista = []
-			#assert bots[0].Pairings == len(plista)
 			
-			try:
-				botsDicts = json.loads(zlib.decompress(bots[1].PairingsList))
-				plistb = [structures.ScoreSet() for _ in xrange(len(botsDicts))]
-				for s,d in zip(plistb,botsDicts):
-					s.__dict__.update(d)
-			except:
-				plistb = []
 				
-			#assert bots[1].Pairings == len(plistb)
 			
 			apair = None
-			for p in plista:
+			for p in pairingsarray[0]:
 				if p.Name == botb:
 					apair = p
 			if apair is None:
 				apair = structures.ScoreSet(name = botb)
-				plista.append(apair)
-				memcache.delete("home")
+				pairingsarray[0].append(apair)
 
 			bpair = None
-			for p in plistb:
+			for p in pairingsarray[1]:
 				if p.Name == bota:
 					bpair = p
 			if bpair is None:
 				bpair = structures.ScoreSet(name = bota)
-				plistb.append(bpair)
-				memcache.delete("home")
+				pairingsarray[1].append(bpair)
 				
 			participantsSet = set(game.Participants)
-			pairingsarray = [plista,plistb]
 			for b, pairings in zip(bots, pairingsarray):
 				i = 0
 				while i < len(pairings):
@@ -228,15 +213,14 @@ class UploadedResults(webapp.RequestHandler):
 				b.Battles += 1
 				if not b.Active:
 					b.Active = True
-					memcache.delete("home")
 					if b.Name not in participantsSet:
 						game.Participants.append(b.Name)
 						participantsSet.add(b.Name)
 						newBot = True
 						
-						
 				b.LastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+			
+			
 			#user.TotalUploads += 1
 			game.TotalUploads += 1
 			
@@ -247,6 +231,7 @@ class UploadedResults(webapp.RequestHandler):
 			
 			game.__dict__["AvgBattles"] = game.__dict__.get("AvgBattles",0.0) * 0.99 + 0.005 * (bots[0].Pairings + bots[1].Pairings)
 			
+			scorestime = time.time() - retrievetime - starttime
 			
 			if not game.Melee or min(pairingsarray, key = lambda plist: min(plist, key = lambda p: p.Battles)) < game.AvgBattles:
 				#do a gradient descent to the lowest battled pairings
@@ -296,13 +281,18 @@ class UploadedResults(webapp.RequestHandler):
 				priobots = [priobot.Name,priobot2.Name]
 				priobots = [b.replace(' ','_') for b in priobots]
 				self.response.out.write("\n[" + string.join(priobots,",") + "]")
+			
 
-
+			priotime = time.time() - scorestime - retrievetime - starttime
+			
 			sync = memcache.get(rumble + "|" + structures.sync)
 			if sync is None:
 				sync = {}
 			else:
-				sync = json.loads(sync)
+				try:
+					sync = json.loads(zlib.decompress(sync))
+				except:
+					sync = {}
 			
 			for b in bots:
 				key = b.key().name()
@@ -314,58 +304,88 @@ class UploadedResults(webapp.RequestHandler):
 			else:
 				uploadsize = 10*2 - 1
 			
-			updates = min(len(sync),sorted(sync.values())[-min(len(sync),uploadsize+1)])
+			updates = min(len(sync),sorted(sync.values())[-min(len(sync),uploadsize*3 + 3)])
 				
-			botdict = {}
-			for b in bots:
-				botdict[b.key().name()] = b
-				botdict[b.key().name() + "|lite"] = structures.LiteBot(b)
-			memcache.set_multi(botdict)
-			
 			#memcache.set(user.key().name(),user)
 			memcache.set(game.Name,game)
-
+			wrote = -1
+			syncsize = -1
 			if (game.Melee and updates >= uploadsize and len(sync) >= game.MeleeSize) or (not game.Melee and len(sync) > uploadsize):
 				syncset = sync.keys()
-				if game.Melee:
-					syncset = filter(lambda b: sync[b] >= uploadsize,syncset)
+				#if game.Melee:
+				#	syncset = filter(lambda b: sync[b] >= uploadsize,syncset)
+				wrote = 0
 				syncbotsDict = memcache.get_multi(syncset)
-				syncbots = syncbotsDict.values()
+				syncbotsPairs = [b + "|pairings" for b in syncbotsDict.keys() if syncbotsDict[b].PairingsList is None]
+				syncbotsPairsDict = memcache.get_multi(syncbotsPairs)
+				syncbots = []
+				for sb in syncbotsPairsDict:
+					pl = syncbotsPairsDict.get(sb, None)
+					if pl is None:
+						pl = syncbotsDict[sb[:-9]].PairingsList
+					if pl is None:
+						sync.pop(sb,1)
+					else:
+						syncbotsDict[sb[:-9]].PairingsList = pl
+						syncbots.append(syncbotsDict[sb[:-9]])
+						
+				syncsize = len(syncbotsPairs)		
+
 				sizelim = 800000
-				try:
+				#try:
+				while len(syncbots) > 0:
+					size = 0
+					thisput = []
 					while len(syncbots) > 0:
-						size = 0
-						thisput = []
-						while len(syncbots) > 0:
-							b = syncbots[-1]
-							l = len(b.PairingsList)#the big one
-							if l+size > sizelim:
-								break
-							size += l
-							syncbots.pop(-1)
-							thisput.append(b)
-							
-						db.put(thisput)
-						for b in thisput:
-							sync.pop(b.key().name(),1)
-				except:
-					self.response.out.write("\nOK. Out of quota. Will write when quota reset.")
+						b = syncbots[-1]
+						l = len(pickle.dumps(b,pickle.HIGHEST_PROTOCOL))
+						if l+size > sizelim:
+							break
+						size += l
+						syncbots.pop(-1)
+						thisput.append(b)
+						wrote += 1
+						
+					db.put(thisput)
+					for b in thisput:
+						sync.pop(b.key().name(),1)
+				#except:
+				#	self.response.out.write("\nOK. Out of quota. Will write when quota reset.")
 					
-				#db.put([user, game])
+			
 			
 			if newBot:
 				game.put()
+				memcache.delete("home")
+			memcache.set(rumble + "|" + structures.sync,zlib.compress(json.dumps(sync),5))
+			
+
+			
+			botdict = {}
+			for b in bots:
+				botdict[b.key().name() + "|pairings"] = b.PairingsList
+				b.PairingsList = None
+				botdict[b.key().name()] = b
 				
-			memcache.set(rumble + "|" + structures.sync,json.dumps(sync))
+			memcache.set_multi(botdict)
+			
+			puttime = time.time() - priotime - scorestime - retrievetime - starttime
 			
 			self.response.out.write("\nOK. " + bota + " vs " + botb + " received")
 			
+			elapsed = time.time() - starttime
+			self.response.out.write(" in " + str(int(round(elapsed*1000))) + "ms")
+			#self.response.out.write(" retrieve:" + str(int(round(retrievetime*1000))) + "ms")
+			#self.response.out.write(" scores:" + str(int(round(scorestime*1000))) + "ms")
+			#self.response.out.write(" priority battles:" + str(int(round(priotime*1000))) + "ms")
+			#self.response.out.write(" put:" + str(int(round(puttime*1000))) + "ms")
+			#self.response.out.write(", wrote " + str(syncsize) + " bots")
+			#self.response.out.write(", " + str(len(sync)) + " bots waiting to write.")
 			
 		else:
 			self.response.out.write("CLIENT NOT SUPPORTED")
 		
-		elapsed = time.time() - starttime
-		self.response.out.write(" in " + str(int(round(elapsed*1000))) + "ms")
+
 
 
 application = webapp.WSGIApplication([

@@ -67,32 +67,26 @@ class BotDetails(webapp.RequestHandler):
 		
 		cached = True
 		keyhash = name + "|" + game
-		entry = memcache.get(keyhash)
-		if entry is None:
+		listblob = memcache.get(keyhash + "|pairings")
+		if listblob is None:
 			entry = structures.BotEntry.get_by_key_name(keyhash)
+
 			if entry is not None:
+				listblob = entry.PairingsList
+				entry.PairingsList = None
 				memcache.set(keyhash,entry)
+				memcache.set(keyhash + "|pairings",listblob)
 				cached = False
-		if entry is None:
+				
+		if listblob is None:
 			return "ERROR. name/game combination does not exist: " + name + " " + game
 		bots = None
-		try:
-			botsDicts = json.loads(zlib.decompress(entry.PairingsList))
-			bots = [structures.ScoreSet() for _ in xrange(len(botsDicts))]
-			for s,d in zip(bots,botsDicts):
-				s.__dict__.update(d)
-		except:
-			bots = pickle.loads(zlib.decompress(entry.PairingsList))
-			for b in bots:
-				if b.__dict__.get("LastUpload",None) is not None:
-					b.LastUpload = b.LastUpload.strftime("%Y-%m-%d %H:%M:%S")
-				else:
-					b.__dict__["LastUpload"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-				
-			dbots = [b.__dict__ for b in bots]
-			entry.PairingsList = zlib.compress(json.dumps(dbots),4)
-			memcache.set(keyhash,entry)
-			#self.response.out.write("Updated to JSON")
+
+		botsDicts = json.loads(zlib.decompress(listblob))
+		bots = [structures.ScoreSet() for _ in botsDicts]
+		for s,d in zip(bots,botsDicts):
+			s.__dict__.update(d)
+
 		
 		retrievetime = time.time() - parsetime - starttime
 		
