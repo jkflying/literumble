@@ -15,9 +15,10 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from operator import attrgetter
 import structures
-
+from structures import global_dict
 class Rankings(webapp.RequestHandler):
 	def get(self):
+		global global_dict
 		starttime = time.time()
 		query = self.request.query_string
 		query = query.replace("%20"," ")
@@ -53,47 +54,68 @@ class Rankings(webapp.RequestHandler):
 			order = "VoteScore"
 			
 		parsing = time.time() - starttime
-		
-		rumble = memcache.get(game)
+		rumble = global_dict.get(game)
 		if rumble is None:
-			rumble = structures.Rumble.get_by_key_name(game)
-		if rumble is None:
-			self.response.out.write("RUMBLE NOT FOUND")
-			return
+			rumble = memcache.get(game)
+			if rumble is None:
+				rumble = structures.Rumble.get_by_key_name(game)
+				if rumble is None:
+					self.response.out.write("RUMBLE NOT FOUND")
+					return
+				else:
+					global_dict[game]=rumble
+					memcache.set(game,rumble)
+			else:
+				global_dict[game] = rumble
 			
 		botHashes = [b + "|" + game for b in rumble.Participants]
-		bdict = memcache.get_multi(botHashes)
-		bots = [bdict.get(h,None) for h in botHashes]
+		membots = [h for h in botHashes if h not in global_dict]
+		if len(membots) > 0:
+			bdict = memcache.get_multi(membots)
+			global_dict.update(bdict)
+		bots = [global_dict.get(h,None) for h in botHashes]
 			
 		missingHashes = []
 		missingIndexes = []
 		for i,b in enumerate(bots):
-			if b is None:
+			if b is None or b.PairingsList is None:
 				missingHashes.append(botHashes[i])
 				missingIndexes.append(i)
-				
+		botsdict = {}	
 		rmis = None
 		if len(missingHashes) > 0:
 			rmis = structures.BotEntry.get_by_key_name(missingHashes)
 			lost = False
-			botsdict = {}
+			
 			for i in xrange(len(missingHashes)):
 				if rmis[i] is not None:
-					rmis[i].PairingsList = None
+					#botsdict[missingHashes[i] + "|pairings"] = str(rmis[i].PairingsList)
+					#rmis[i].PairingsList = None
 					bots[missingIndexes[i]] = rmis[i]
-					botsdict[rmis[i].key().name()] = rmis[i]
+					botsdict[missingHashes[i]] = rmis[i]
 				else:
-					#partSet = set(rumble.Participants)
-					#partSet.discard(missingHashes[i])
-					#rumble.Participants = list(partSet)
-					#memcache.set(game,rumble)
-					#rumble.put()
+					partSet = set(rumble.Participants)
+					partSet.discard(missingHashes[i].split("|")[0])
+					rumble.Participants = list(partSet)
+
 					lost = True
 					
-			memcache.set_multi(botsdict)
+			
 			if lost:
 				bots = filter(lambda b: b is not None, bots)
-			
+				global_dict[game] = rumble
+				memcache.set(game,rumble)
+				rumble.put()
+				
+		#for b in bots:
+		#	if b.PairingsList is not None:
+		#		botsdict[b.key().name() + "|pairings"] = str(b.PairingsList)
+		#		b.PairingsList = None
+		#		botsdict[b.key().name()] = b
+				
+		if len(botsdict) > 0:
+			global_dict.update(botsdict)
+			memcache.set_multi(botsdict)
 		retrievetime = time.time() - starttime - parsing
 		
 		for b in bots:
@@ -173,7 +195,7 @@ class Rankings(webapp.RequestHandler):
 			out.append("\n<br> html generation: " + str(int(round(htmltime*1000))) )
 		out.append( "</body></html>")
 		
-		outstr = string.join(out,"")
+		outstr = ''.join(out)
 			
 		self.response.out.write(outstr)
 

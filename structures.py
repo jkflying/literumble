@@ -17,6 +17,8 @@ total = "TOTAL"
 participants = "PARTICIPANTS"
 sync = "SYNCHRONIZE"
 
+global_dict = {}
+
 #class Pairing(db.Model):
 	##ABRU = db.StringProperty() --> key_name
 	#BotA = db.StringProperty()
@@ -85,4 +87,5 @@ class Rumble(db.Model):
 	Participants = db.StringListProperty(indexed = False) 
 	AvgBattles = db.FloatProperty(indexed = False, default = 0.0)
 	PriorityBattles = db.BooleanProperty(indexed = False, default = True)
+	BatchScoresAccurate = db.BooleanProperty(default = False)
 

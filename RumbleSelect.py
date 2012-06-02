@@ -18,9 +18,10 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from operator import attrgetter
 import structures
-
+from structures import global_dict
 class RumbleSelect(webapp.RequestHandler):
 	def get(self):
+		global global_dict
 		starttime = time.time()
 		query = self.request.query_string
 		query = query.replace("%20"," ")
@@ -40,13 +41,14 @@ class RumbleSelect(webapp.RequestHandler):
 		
 		if timing:
 			extraArgs += "&timing=1"
-		
-		outstr = memcache.get("home")
+		outstr = global_dict.get("home",None)
+		if outstr is None and not regen:
+			outstr = memcache.get("home")
 		if outstr is None or regen:
 			
 			#gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
 			out = []
-			out.append(  "<html><head><title>LiteRumble - Home</title></head>LiteRumble - Home<br>\n")
+			out.append("<html><head><title>LiteRumble - Home</title></head>LiteRumble - Home<br>\n")
 			q = structures.Rumble.all()
 			
 			rumbles = [[],[],[]]

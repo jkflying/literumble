@@ -16,7 +16,7 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 
 import structures
-
+from structures import global_dict
 class RemoveOldParticipant(webapp.RequestHandler):
 	def get(self):
 		parts = self.request.query_string.split("&")
@@ -38,6 +38,7 @@ class RemoveOldParticipant(webapp.RequestHandler):
 		
 
 def removeFromRumble(self,requests):
+	global global_dict
 	if "version" not in requests or requests["version"] is not "1":
 		return "ERROR. bad/no version"
 		
@@ -52,17 +53,24 @@ def removeFromRumble(self,requests):
 		return "ERROR. no name specified"
 	name = name.replace("_"," ")
 	
-	rumble = memcache.get(game)
+	rumble = global_dict.get(game,None)
 	if rumble is None:
-		rumble = structures.Rumble.get_by_key_name(game)
+		rumble = memcache.get(game)
+		if rumble is None:
+			rumble = structures.Rumble.get_by_key_name(game)
 
 	
 	keyhash = name + "|" + game
-	entry = memcache.get(keyhash)
+	entry = global_dict.get(keyhash,None)
 	if entry is None:
-		entry = structures.BotEntry.get_by_key_name(keyhash)
-	if entry is None:
-		return "ERROR. game does not exist: " + game
+		entry = memcache.get(keyhash)
+		if entry is None:
+			entry = structures.BotEntry.get_by_key_name(keyhash)
+			if entry is None:
+				return "ERROR. game does not exist: " + game
+	
+	global_dict.pop(keyhash,0)
+	memcache.delete(keyhash)
 		
 	entry.Active = False
 	pset = set(rumble.Participants)#avoid duplicates etc - a bit of spring cleaning
@@ -71,11 +79,13 @@ def removeFromRumble(self,requests):
 	rumble.Participants = list(pset)
 	
 	memcache.delete("home")
+	global_dict.pop("home",0)
 	
-	memcache.set(entry.key().name() + "|lite", structures.LiteBot(entry))
-	memcache.set(entry.key().name(),entry)
+	#memcache.set(entry.key().name() + "|lite", structures.LiteBot(entry))
+	#memcache.set(entry.key().name(),entry)
 	entry.put()
 	
+	structures.global_dict.set(game,rumble)
 	memcache.set(game,rumble)
 	rumble.put()
 	

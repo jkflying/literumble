@@ -67,22 +67,22 @@ class BotDetails(webapp.RequestHandler):
 		
 		cached = True
 		keyhash = name + "|" + game
-		listblob = memcache.get(keyhash + "|pairings")
-		if listblob is None:
-			entry = structures.BotEntry.get_by_key_name(keyhash)
+		bot = structures.global_dict.get(keyhash,None)
+		if bot is None:
+			bot = memcache.get(keyhash)
+		if bot is None or bot.PairingsList is None:
+			bot = structures.BotEntry.get_by_key_name(keyhash)
 
-			if entry is not None:
-				listblob = entry.PairingsList
-				entry.PairingsList = None
-				memcache.set(keyhash,entry)
-				memcache.set(keyhash + "|pairings",listblob)
+			if bot is not None:
+				
+				memcache.set(keyhash,bot)
 				cached = False
 				
-		if listblob is None:
+		if bot is None:
 			return "ERROR. name/game combination does not exist: " + name + " " + game
 		bots = None
 
-		botsDicts = json.loads(zlib.decompress(listblob))
+		botsDicts = json.loads(zlib.decompress(bot.PairingsList))
 		bots = [structures.ScoreSet() for _ in botsDicts]
 		for s,d in zip(bots,botsDicts):
 			s.__dict__.update(d)
