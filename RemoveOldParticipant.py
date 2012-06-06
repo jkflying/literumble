@@ -85,7 +85,7 @@ def removeFromRumble(self,requests):
 	#memcache.set(entry.key().name(),entry)
 	entry.put()
 	
-	structures.global_dict.set(game,rumble)
+	global_dict[game]=rumble
 	memcache.set(game,rumble)
 	rumble.put()
 	
