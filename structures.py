@@ -38,7 +38,8 @@ class ScoreSet:
 		self.Survival = survival
 		self.Battles = battles
 		self.LastUpload = lastUpload
-		
+		self.KNNPBI = 0
+		self.NPP = aps
 #class LiteBot:
 	##def __init__(self):
 		
