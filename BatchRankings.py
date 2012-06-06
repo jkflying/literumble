@@ -97,13 +97,16 @@ class BatchRankings(webapp.RequestHandler):
 					bots[botIndexes[m["Name"]]].VoteScore += 1
 			
 			if len(bots) > 0:
-				inv_len = 100.0/len(bots)
+				#inv_len = 100.0/len(bots)
 				
 				for b in bots:
-					#botsdict[b.key().name() + "|pairings"] = str(p)
-					#b.PairingsList = None
-					b.VoteScore *= inv_len
-					botsdict[b.key().name()] = b
+					if b.Pairings > 0:
+						b.VoteScore /= b.Pairings
+						botsdict[b.key().name()] = b
+			
+			#KNN PBI
+			
+			# Avg Normalised Pairing Percentage
 					
 			if len(botsdict) > 0:
 				memcache.set_multi(botsdict)
