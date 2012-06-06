@@ -117,14 +117,16 @@ class Rankings(webapp.RequestHandler):
 			global_dict.update(botsdict)
 			memcache.set_multi(botsdict)
 		retrievetime = time.time() - starttime - parsing
-		
+		newbots = []
 		for b in bots:
 			b.PWIN = round(1000.0*float(b.PL)/b.Pairings)*0.05 + 50
 			b.Survival = round(100.0*b.Survival)*0.01
 			b.APS = round(100.0*b.APS)*0.01
 			b.VoteScore = round(100*b.VoteScore)*0.01
 		
-		bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)
+		get_key = attrgetter(order)
+		
+		bots.sort( key=lambda b: get_key(b), reverse=reverseSort)
 		
 		sorttime = time.time() - parsing - retrievetime - starttime
 		
