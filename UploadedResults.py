@@ -86,7 +86,7 @@ class UploadedResults(webapp.RequestHandler):
 			#botPairingsHashes = [h + "|pairings" for h in botHashes]
 			syncname = rumble + "|" + structures.sync
 			getHashes = botHashes + [syncname]
-			getHashes = [h for h in getHashes if h not in global_dict]
+			getHashes = [h for h in getHashes]# if h not in global_dict]
 			
 			botdict = memcache.get_multi(getHashes)
 			global_dict.update(botdict)
@@ -199,21 +199,22 @@ class UploadedResults(webapp.RequestHandler):
 				survival = 0.0
 				pl = 0
 				battles = 0
-				for p in pairings:
-					aps += p.APS
-					survival += p.Survival
-					if p.APS > 50:
-						pl += 1
-					else:
-						pl -= 1
-					battles += p.Battles
-						
-				aps /= len(pairings)
-				survival /= len(pairings)
-				b.APS = aps
-				b.Survival = survival
-				b.PL = pl
-				b.Battles = battles
+				if len(pairings) > 0:
+					for p in pairings:
+						aps += p.APS
+						survival += p.Survival
+						if p.APS > 50:
+							pl += 1
+						else:
+							pl -= 1
+						battles += p.Battles
+							
+					aps /= len(pairings)
+					survival /= len(pairings)
+					b.APS = aps
+					b.Survival = survival
+					b.PL = pl
+					b.Battles = battles
 
 			#for b in bots:
 				#b.Battles += 1
@@ -282,8 +283,8 @@ class UploadedResults(webapp.RequestHandler):
 					while priobot2 is None:
 						pIndex = int(random.random()**3 * (priobot.Pairings-1))
 						#more likely to choose low battles by cubic distribution, but random
-						if priopair[pIndex].Name != priobot.Name:
-							priobot2 = priopair[pIndex].Name
+						if priopairs[pIndex].Name != priobot.Name:
+							priobot2 = priopairs[pIndex].Name
 						
 				if priobot is not None and priobot2 is not None:	
 					priobots = [priobot.Name,priobot2]
@@ -310,23 +311,26 @@ class UploadedResults(webapp.RequestHandler):
 			if game.Melee:
 				uploadsize = game.MeleeSize -1
 			else:
-				uploadsize = 10*2 - 1
+				uploadsize = 1000
 			
-			updates = min(len(sync),sorted(sync.values())[-min(len(sync),uploadsize*3 + 3)])
+			updates = min(len(sync),sorted(sync.values())[-min(len(sync),game.MeleeSize*10)])
 				
 			#memcache.set(user.key().name(),user)
-
+			
 			wrote = -1
 			syncsize = -1
-			if (game.Melee and updates >= uploadsize and len(sync) >= game.MeleeSize) or (not game.Melee and len(sync) > uploadsize):
+			if (game.Melee and updates >= uploadsize and len(sync) >= game.MeleeSize) or (not game.Melee and sum(sync.values()) > uploadsize):
 				syncset = sync.keys()
-				#if game.Melee:
-				#	syncset = filter(lambda b: sync[b] >= uploadsize,syncset)
+				if game.Melee:
+					syncset = filter(lambda b: sync[b] >= game.MeleeSize-1,syncset)
+				else:
+					syncset = filter(lambda b: sync[b] >= 3,syncset)
 				#wrote = 0
 				#syncbotsPairs = [b + "|pairings" for b in syncset]
-				syncset = [s for s in syncset if s not in global_dict]
-				syncbotsDict = memcache.get_multi(syncset)# + syncbotsPairs)
-				global_dict.update(syncbotsDict)
+				syncsetMem = [s for s in syncset if s not in global_dict]
+				if len(syncsetMem) > 0:
+					syncbotsDict = memcache.get_multi(syncsetMem)# + syncbotsPairs)
+					global_dict.update(syncbotsDict)
 				#syncbotsPairsDict = memcache.get_multi(syncbotsPairs)
 				syncbots = []
 				for sb in syncset:
@@ -343,25 +347,27 @@ class UploadedResults(webapp.RequestHandler):
 				syncsize = len(syncbots)		
 
 				sizelim = 800000
-				#try:
-				while len(syncbots) > 0:
-					size = 0
-					thisput = []
+				try:
 					while len(syncbots) > 0:
-						b = syncbots[-1]
-						l = len(pickle.dumps(b,-1))
-						if l+size > sizelim:
-							break
-						size += l
-						syncbots.pop(-1)
-						thisput.append(b)
-						wrote += 1
-						
-					db.put(thisput)
-					for b in thisput:
-						sync.pop(b.key().name(),1)
-				#except:
-				#	self.response.out.write("\nOK. Out of quota. Will write when quota reset.")
+						size = 0
+						thisput = []
+						while len(syncbots) > 0:
+							b = syncbots[-1]
+							l = len(pickle.dumps(b,-1))
+							if l+size > sizelim:
+								break
+							size += l
+							syncbots.pop(-1)
+							thisput.append(b)
+							wrote += 1
+						#try:
+						db.put(thisput)
+						for b in thisput:
+							sync.pop(b.key().name(),1)
+						#except:
+						#	self.response.out.write("\nERROR WRITING DATA!! QUOTA REACHED?")
+				except:
+					self.response.out.write("\nERROR WRITING DATA!! QUOTA REACHED?")
 					
 			
 			
