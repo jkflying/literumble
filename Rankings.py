@@ -8,6 +8,7 @@ try:
 except:
     import simplejson as json
 import string
+import cPickle as pickle
 
 from google.appengine.ext import db
 from google.appengine.api import users
@@ -15,6 +16,7 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from operator import attrgetter
 import structures
+import zlib
 from structures import global_dict
 class Rankings(webapp.RequestHandler):
 	def get(self):
@@ -43,6 +45,8 @@ class Rankings(webapp.RequestHandler):
 			
 			
 		reverseSort = True
+		if len(order) == 0:
+			order = "APS"
 		if order[0] == "-":
 			order = order[1:]
 			reverseSort = False
@@ -67,62 +71,80 @@ class Rankings(webapp.RequestHandler):
 					memcache.set(game,rumble)
 			else:
 				global_dict[game] = rumble
+		
+		try:
+			botsdict = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+			bots = botsdict.values()
+			#if len(rumble.Participants) > 0:
+				#rumble.Participants = []
+				#rumble.put()
+		#try:
+		#	print "hello"
+		except:
+			print "decompressed unsuccessfully"
+			botHashes = [b + "|" + game for b in rumble.Participants]
+			membots = [h for h in botHashes if h not in global_dict]
+			if len(membots) > 0:
+				bdict = memcache.get_multi(membots)
+				global_dict.update(bdict)
+			bots = [global_dict.get(h,None) for h in botHashes]
 			
-		botHashes = [b + "|" + game for b in rumble.Participants]
-		membots = [h for h in botHashes if h not in global_dict]
-		if len(membots) > 0:
-			bdict = memcache.get_multi(membots)
-			global_dict.update(bdict)
-		bots = [global_dict.get(h,None) for h in botHashes]
+			botsdict = {}	
 			
-		missingHashes = []
-		missingIndexes = []
-		for i,b in enumerate(bots):
-			if b is None or b.PairingsList is None:
-				missingHashes.append(botHashes[i])
-				missingIndexes.append(i)
-		botsdict = {}	
-		rmis = None
-		if len(missingHashes) > 0:
-			rmis = structures.BotEntry.get_by_key_name(missingHashes)
-			lost = False
+			missingHashes = []
+			missingIndexes = []
+			for i,b in enumerate(bots):
+				if b is None:
+					missingHashes.append(botHashes[i])
+					missingIndexes.append(i)
+				elif isinstance(b,structures.BotEntry):
+					bots[i] = structures.CachedBotEntry(b)
+					botsdict[bots[i].key_name] = bots[i]
 			
-			for i in xrange(len(missingHashes)):
-				if rmis[i] is not None:
-					#botsdict[missingHashes[i] + "|pairings"] = str(rmis[i].PairingsList)
-					#rmis[i].PairingsList = None
-					bots[missingIndexes[i]] = rmis[i]
-					botsdict[missingHashes[i]] = rmis[i]
-				else:
-					partSet = set(rumble.Participants)
-					partSet.discard(missingHashes[i].split("|")[0])
-					rumble.Participants = list(partSet)
+			rmis = None
+			if len(missingHashes) > 0:
+				rmis = structures.BotEntry.get_by_key_name(missingHashes)
+				lost = False
+				
+				for i in xrange(len(missingHashes)):
+					if rmis[i] is not None:
+						bots[missingIndexes[i]] = structures.CachedBotEntry(rmis[i])
+						botsdict[missingHashes[i]] = bots[missingIndexes[i]]
+					else:
+						partSet = set(rumble.Participants)
+						partSet.discard(missingHashes[i].split("|")[0])
+						rumble.Participants = list(partSet)
 
-					lost = True
+						lost = True
+						
+				
+				if lost:
+					bots = filter(lambda b: b is not None, bots)
+					global_dict[game] = rumble
+					memcache.set(game,rumble)
+					rumble.put()
 					
+			if len(botsdict) > 0:
+				#global_dict.update(botsdict)
+				memcache.set_multi(botsdict)
+			scores = {}
+			for b in bots:
+				scores[b.Name] = structures.LiteBot(b)
+			rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),1)
+			#rumble.Participants = []
+			global_dict[game] = rumble
+			memcache.set(game,rumble)
+			rumble.put()
 			
-			if lost:
-				bots = filter(lambda b: b is not None, bots)
-				global_dict[game] = rumble
-				memcache.set(game,rumble)
-				rumble.put()
-				
-		#for b in bots:
-		#	if b.PairingsList is not None:
-		#		botsdict[b.key().name() + "|pairings"] = str(b.PairingsList)
-		#		b.PairingsList = None
-		#		botsdict[b.key().name()] = b
-				
-		if len(botsdict) > 0:
-			global_dict.update(botsdict)
-			memcache.set_multi(botsdict)
 		retrievetime = time.time() - starttime - parsing
-		newbots = []
+		#newbots = []
 		for b in bots:
-			b.PWIN = round(1000.0*float(b.PL)/b.Pairings)*0.05 + 50
-			b.Survival = round(100.0*b.Survival)*0.01
-			b.APS = round(100.0*b.APS)*0.01
-			b.VoteScore = round(100*b.VoteScore)*0.01
+			b.PWIN = 50.0*float(b.PL)/b.Pairings + 50.0
+			
+			if b.VoteScore is None:
+				b.VoteScore = 0
+			if b.ANPP is None:
+				b.ANPP = 0
 		
 		get_key = attrgetter(order)
 		
@@ -137,9 +159,9 @@ class Rankings(webapp.RequestHandler):
 		elif order == "VoteScore":
 			order = "Vote"
 		out = []
-		out.append("<html><head><title>LiteRumble - " + game + "</title></head>")
-		out.append("\n<body>RANKINGS - " + string.upper(game) + " WITH " + str(len(rumble.Participants)) + " BOTS<br>\n<table border=\"1\">\n<tr>")
-		headings = ["  ","Competitor","APS","PWIN","Vote","Survival","Pairings","Battles","Latest Battle"]
+		out.append("<html>\n<head>\n	<title>LiteRumble - " + game + "</title>\n</head>")
+		out.append("\n<body>RANKINGS - " + string.upper(game) + " WITH " + str(len(bots)) + " BOTS<br>\n<table border=\"1\">\n	<tr>")
+		headings = ["","Competitor","APS","PWIN","ANPP","Vote","Survival","Pairings","Battles","Latest Battle"]
 		for heading in headings:
 			sortedBy = order == heading
 			if order == heading and reverseSort:
@@ -156,8 +178,8 @@ class Rankings(webapp.RequestHandler):
 			orderHref = ''.join(orderl)
 			if sortedBy:
 				orderHref = "<i>" + orderHref + "</i>"
-			out.append( "\n<th>" + orderHref + "</th>")
-		out.append("\n</tr>")
+			out.append( "\n		<th>" + orderHref + "</th>")
+		out.append("\n	</tr>")
 		rank = 1
 		for bot in bots:
 			if rank > lim:
@@ -175,14 +197,20 @@ class Rankings(webapp.RequestHandler):
 			bnh.append("</a")
 			botNameHref = ''.join(bnh) #"<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
 			
-			cells = [str(rank),botNameHref,bot.APS,bot.PWIN,bot.VoteScore,bot.Survival,bot.Pairings,bot.Battles,bot.LastUpload]
-			out.append("\n<tr>")
+			cells = [str(rank),botNameHref,
+				round(100.0*bot.APS)*0.01,
+				round(100.0*bot.PWIN)*0.01,
+				round(100.0*bot.ANPP)*0.01,
+				round(100.0*bot.VoteScore)*0.01,
+				round(100.0*bot.Survival)*0.01,
+				bot.Pairings,bot.Battles,bot.LastUpload]
+			out.append("\n	<tr>")
 			for cell in cells:
-				out.append( "\n<td>")
+				out.append( "\n		<td>")
 				out.append(str(cell))
 				out.append("</td>")
-			out.append("\n</tr>")
-			
+			out.append("\n	</tr>")
+			del bot.PWIN
 			rank += 1
 			
 		out.append( "</table>")
@@ -190,7 +218,7 @@ class Rankings(webapp.RequestHandler):
 		
 		elapsed = time.time() - starttime
 		if timing:
-			out.append( "\n<br> Page served in " + str(int(round(elapsed*1000))) + "ms. " + str(len(missingHashes)) + " bots retrieved from datastore.")
+			out.append( "\n<br> Page served in " + str(int(round(elapsed*1000))) + "ms. ")# + str(len(missingHashes)) + " bots retrieved from datastore.")
 			out.append("\n<br> parsing: " + str(int(round(parsing*1000))) )
 			out.append("\n<br> retrieve: " + str(int(round(retrievetime*1000))) )
 			out.append("\n<br> sort: " + str(int(round(sorttime*1000))) )

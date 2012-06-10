@@ -9,6 +9,8 @@ try:
 except:
     import simplejson as json
 import string
+import cPickle as pickle
+import zlib
 
 from google.appengine.ext import db
 from google.appengine.api import users
@@ -65,25 +67,36 @@ def removeFromRumble(self,requests):
 	if entry is None:
 		entry = memcache.get(keyhash)
 		if entry is None:
-			entry = structures.BotEntry.get_by_key_name(keyhash)
+			entry = structures.CachedBotEntry(structures.BotEntry.get_by_key_name(keyhash))
 			if entry is None:
 				return "ERROR. game does not exist: " + game
 	
+	if isinstance(entry,structures.BotEntry):
+		entry = structures.CachedBotEntry(entry)
+		
 	global_dict.pop(keyhash,0)
 	memcache.delete(keyhash)
 		
 	entry.Active = False
-	pset = set(rumble.Participants)#avoid duplicates etc - a bit of spring cleaning
-	pset.discard(entry.Name)
+	#pset = set(rumble.Participants)#avoid duplicates etc - a bit of spring cleaning
+	#pset.discard(entry.Name)
+	scores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+	scores.pop(name,1)
+	rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),4)
 	
-	rumble.Participants = list(pset)
+	#rumble.Participants = list(pset)
 	
 	memcache.delete("home")
 	global_dict.pop("home",0)
 	
 	#memcache.set(entry.key().name() + "|lite", structures.LiteBot(entry))
 	#memcache.set(entry.key().name(),entry)
-	entry.put()
+	#entry.put()
+	memcache.set(entry.key_name,entry)
+	global_dict[entry.key_name] = entry
+	modelBot = structures.BotEntry(key_name = entry.key_name)
+	modelBot.init_from_cache(entry)
+	modelBot.put()
 	
 	global_dict[game]=rumble
 	memcache.set(game,rumble)

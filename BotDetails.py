@@ -10,7 +10,7 @@ except:
 import string
 
 import zlib
-import pickle
+import cPickle as pickle
 
 from google.appengine.ext import db
 from google.appengine.api import users
@@ -67,32 +67,37 @@ class BotDetails(webapp.RequestHandler):
 		
 		cached = True
 		keyhash = name + "|" + game
-		bot = structures.global_dict.get(keyhash,None)
+		bot = memcache.get(keyhash)
 		if bot is None:
-			bot = memcache.get(keyhash)
+			bot = structures.global_dict.get(keyhash,None)
+		else:
+			structures.global_dict[keyhash] = bot
+			
 		if bot is None or bot.PairingsList is None:
 			bot = structures.BotEntry.get_by_key_name(keyhash)
 
 			if bot is not None:
 				
 				memcache.set(keyhash,bot)
+				structures.global_dict[keyhash] = bot
 				cached = False
 				
 		if bot is None:
 			return "ERROR. name/game combination does not exist: " + name + " " + game
 		bots = None
 
-		botsDicts = json.loads(zlib.decompress(bot.PairingsList))
-		bots = [structures.ScoreSet() for _ in botsDicts]
-		for s,d in zip(bots,botsDicts):
-			s.__dict__.update(d)
+		try:
+			bots = pickle.loads(zlib.decompress(bot.PairingsList))
+		except:
+			botsDicts = json.loads(zlib.decompress(bot.PairingsList))
+			bots = [structures.ScoreSet() for _ in botsDicts]
+			for s,d in zip(bots,botsDicts):
+				s.__dict__.update(d)
 
 		
 		retrievetime = time.time() - parsetime - starttime
 		
 		for b in bots:
-			b.Survival = round(100.0*b.Survival)*0.01
-			b.APS = round(100.0*b.APS)*0.01
 			lastUpload = None
 			try:
 				lastUpload = b.LastUpload
@@ -114,13 +119,15 @@ class BotDetails(webapp.RequestHandler):
 		headings = ["  ",
 		"Name",
 		"APS",
+		"NPP",
 		"Survival",
+		"KNNPBI",
 		"Battles",
 		"Latest Battle"]
 		
 		for heading in headings:
-			sortedBy = order == heading
-			if order == heading and reverseSort:
+			sortedBy = (order == heading)
+			if sortedBy and reverseSort:
 				heading = "-" + heading
 				
 			orderHref = botNameHref = "<a href=BotDetails?game="+game+"&name="+name.replace(" ","%20")+"&order="+ heading.replace(" ","%20") + extraArgs + ">"+heading+"</a>"
@@ -135,7 +142,14 @@ class BotDetails(webapp.RequestHandler):
 
 			botName=bot.Name
 			botNameHref = "<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
-			cells = [str(rank),botNameHref,bot.APS,bot.Survival,bot.Battles,bot.LastUpload]
+			cells = [str(rank),
+			botNameHref,
+			round(100.0*bot.APS)*0.01,
+			round(100.0*bot.NPP)*0.01,
+			round(100.0*bot.Survival)*0.01,
+			round(100.0*bot.KNNPBI)*0.01,
+			bot.Battles,
+			bot.LastUpload]
 			out.append( "\n<tr>")
 			for cell in cells:
 				out.append(  "\n<td>" + str(cell) + "</td>")

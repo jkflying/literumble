@@ -63,13 +63,24 @@ class RumbleSelect(webapp.RequestHandler):
 					rumbles[0].append(r)
 			
 			for cat,rumbs in zip(categories,rumbles):
-				rumbs.sort(key = lambda r: -len(r.Participants))
+				for r in rumbs:
+					try:
+						scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
+						entries = len(scores)
+					except:
+						entries = len(r.Participants)
+					r.__dict__["entries"] = entries	
+				rumbs.sort(key = lambda r: -r.__dict__["entries"])
+				
 				out.append(  "<table border=\"1\">\n<tr>")
 				out.append(  "\n<th>" + cat + "</th><th>Participants</th>\n</tr>")
+
 				for r in rumbs:
 					game = r.Name
 					gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
-					out.append( "\n<tr><td>" + gameHref + "</td><td>" + str(len(r.Participants)) + "</td></tr>")
+
+					out.append( "\n<tr><td>" + gameHref + "</td><td>" + str(r.__dict__["entries"]) + "</td></tr>")
+					memcache.set(r.Name,r)
 				out.append(  "<br><br>")
 			
 			out.append(  "</table>")

@@ -40,22 +40,52 @@ class ScoreSet:
 		self.LastUpload = lastUpload
 		self.KNNPBI = 0
 		self.NPP = aps
-#class LiteBot:
-	##def __init__(self):
+class LiteBot:
+	def __init__ (self, bot):
+		self.Name = bot.Name
+		self.Battles = bot.Battles
+		self.Pairings = bot.Pairings
+		self.APS = bot.APS
+		self.Survival = bot.Survival
+		self.PL = bot.PL
+		self.VoteScore = bot.VoteScore
+		self.Rumble = bot.Rumble
+		self.LastUpload = bot.LastUpload
+		self.Active = bot.Active
+		self.ANPP = bot.ANPP
 		
-	#def __init__ (self, bot):
-		#self.Name = bot.Name
-		#self.Battles = bot.Battles
-		#self.Pairings = bot.Pairings
-		#self.APS = bot.APS
-		#self.Survival = bot.Survival
-		#self.PL = bot.PL
-		#self.Rumble = bot.Rumble
-		#self.LastUpload = bot.LastUpload
-		#self.Active = bot.Active
-		
+class CachedBotEntry:
+	def __init__(self,bot):
+		self.key_name = bot.key().name()
+		self.Name = bot.Name
+		self.Battles = bot.Battles
+		self.Pairings = bot.Pairings
+		self.APS = bot.APS
+		self.Survival = bot.Survival
+		self.PL = bot.PL
+		self.VoteScore = bot.VoteScore
+		self.Rumble = bot.Rumble
+		self.LastUpload = bot.LastUpload
+		self.Active = bot.Active
+		self.PairingsList = bot.PairingsList
+		self.ANPP = bot.ANPP
 		
 class BotEntry(db.Model):
+	def init_from_cache(self,bot):
+		self.key_name = bot.key_name
+		self.Name = bot.Name
+		self.Battles = bot.Battles
+		self.Pairings = bot.Pairings
+		self.APS = bot.APS
+		self.Survival = bot.Survival
+		self.PL = bot.PL
+		self.VoteScore = bot.VoteScore
+		self.Rumble = bot.Rumble
+		self.LastUpload = bot.LastUpload
+		self.Active = bot.Active
+		self.PairingsList = bot.PairingsList
+		self.ANPP = bot.ANPP
+		
 	#NR = db.StringProperty() --> key_name
 	Name = db.StringProperty(indexed = False)
 	Battles = db.IntegerProperty(indexed = False)
@@ -68,7 +98,9 @@ class BotEntry(db.Model):
 	LastUpload = db.StringProperty(indexed = False)
 	Active = db.BooleanProperty(indexed = False)
 	PairingsList = db.BlobProperty(indexed = False)
-
+	ANPP = db.FloatProperty(indexed = False, default = 0.0)
+	
+	
 class Uploader(db.Model):
 	#NC = db.StringProperty() --> key_name
 	Name = db.StringProperty(indexed = False)
@@ -89,4 +121,4 @@ class Rumble(db.Model):
 	AvgBattles = db.FloatProperty(indexed = False, default = 0.0)
 	PriorityBattles = db.BooleanProperty(indexed = False, default = True)
 	BatchScoresAccurate = db.BooleanProperty(default = False)
-
+	ParticipantsScores = db.BlobProperty(indexed = False)
