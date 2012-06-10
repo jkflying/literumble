@@ -30,6 +30,4 @@ handlers:
 - url: .BatchRankings
   script: BatchRankings.application
   login: admin
-  
-builtins:
-- appstats: on
+
