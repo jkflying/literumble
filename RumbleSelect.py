@@ -84,14 +84,21 @@ class RumbleSelect(webapp.RequestHandler):
 					r.__dict__["entries"] = entries	
 				rumbs.sort(key = lambda r: -r.__dict__["entries"])
 				
-				out.append(  "<table border=\"1\">\n	<tr>")
-				out.append(  "\n		<th>" + cat + "</th>\n		<th>Participants</th>\n	</tr>")
-
-				for r in rumbs:
+				out.append(  "<table border=\"0\" bgcolor=\"#D0D0D0\">\n	<tr>")
+				
+				out.append(  "\n		<th colspan=\"2\">" + cat + "</th>\n		<th>Participants</th>\n	</tr>")
+				
+				for i,r in enumerate(rumbs):
 					game = r.Name
 					gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
-
-					out.append( "\n	<tr>\n		<td>" + gameHref + "</td>\n		<td>" + str(r.__dict__["entries"]) + "</td>\n	</tr>")
+					topHref = "<a href=Rankings?game=" + game +"&limit=50"+ extraArgs + ">top 50</a>"
+					if i%2 == 0:
+						color = "FFFFFF"
+					else:
+						color = "F8F8F8"
+						
+					out.append( "\n	<tr bgcolor=\"" + color + "\">\n		<td>" + gameHref + "</td>\n		<td>" + topHref + "</td>\n		<td align=\"center\">")
+					out.append(str(r.__dict__["entries"]) + "</td>\n	</tr>")
 					memcache.set(r.Name,r)
 				out.append(  "\n	<br>\n	<br>")
 			
