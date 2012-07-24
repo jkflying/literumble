@@ -17,7 +17,7 @@ total = "TOTAL"
 participants = "PARTICIPANTS"
 sync = "SYNCHRONIZE"
 
-global_dict = {}
+#global_dict = {}
 
 #class Pairing(db.Model):
 	##ABRU = db.StringProperty() --> key_name
@@ -31,6 +31,17 @@ global_dict = {}
 	#LastUpload = db.DateTimeProperty()
 	#Active = db.BooleanProperty()
 
+class ComparePair:
+	def __init__ (self, bota, botb):
+		self.Name = bota.Name
+		self.A_APS = bota.APS
+		self.B_APS = botb.APS
+		self.A_Survival = bota.Survival
+		self.B_Survival = botb.Survival
+		self.Diff_APS = self.A_APS - self.B_APS
+		self.Diff_Survival = self.A_Survival - self.B_Survival
+		
+
 class ScoreSet:
 	def __init__ (self, name = "", aps = 0.0, survival = 0.0, battles = 0, lastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
 		self.Name = name
@@ -40,19 +51,21 @@ class ScoreSet:
 		self.LastUpload = lastUpload
 		self.KNNPBI = 0
 		self.NPP = aps
+		
 class LiteBot:
-	def __init__ (self, bot):
-		self.Name = bot.Name
-		self.Battles = bot.Battles
-		self.Pairings = bot.Pairings
-		self.APS = bot.APS
-		self.Survival = bot.Survival
-		self.PL = bot.PL
-		self.VoteScore = bot.VoteScore
-		self.Rumble = bot.Rumble
-		self.LastUpload = bot.LastUpload
-		self.Active = bot.Active
-		self.ANPP = bot.ANPP
+	def __init__ (self, bot = None):
+		if bot is not None:
+			self.Name = bot.Name
+			self.Battles = bot.Battles
+			self.Pairings = bot.Pairings
+			self.APS = bot.APS
+			self.Survival = bot.Survival
+			self.PL = bot.PL
+			self.VoteScore = bot.VoteScore
+			self.Rumble = bot.Rumble
+			self.LastUpload = bot.LastUpload
+			self.Active = bot.Active
+			self.ANPP = bot.ANPP
 		
 class CachedBotEntry:
 	def __init__(self,bot):

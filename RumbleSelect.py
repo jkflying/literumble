@@ -18,10 +18,11 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from operator import attrgetter
 import structures
-from structures import global_dict
+#from structures import global_dict
 class RumbleSelect(webapp.RequestHandler):
 	def get(self):
-		global global_dict
+		#global global_dict
+		global_dict = {}
 		starttime = time.time()
 		query = self.request.query_string
 		query = query.replace("%20"," ")
@@ -55,6 +56,10 @@ class RumbleSelect(webapp.RequestHandler):
 			categories = ["1v1","Melee","Teams"]
 			
 			for r in q.run():
+				memr = memcache.get(r.Name)
+				if memr is not None:
+					r = memr
+					
 				if r.Melee:
 					rumbles[1].append(r)
 				elif r.Teams:
@@ -65,25 +70,32 @@ class RumbleSelect(webapp.RequestHandler):
 			for cat,rumbs in zip(categories,rumbles):
 				for r in rumbs:
 					try:
-						scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
-						entries = len(scores)
+						scoresdicts = json.loads(zlib.decompress(r.ParticipantsScores))
+						entries = len(scoresdicts)
+#					print entries
+#					try:
+#						print "fun!"
 					except:
-						entries = len(r.Participants)
+						try:
+							scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
+							entries = len(scores)
+						except:
+							entries = len(r.Participants)
 					r.__dict__["entries"] = entries	
 				rumbs.sort(key = lambda r: -r.__dict__["entries"])
 				
-				out.append(  "<table border=\"1\">\n<tr>")
-				out.append(  "\n<th>" + cat + "</th><th>Participants</th>\n</tr>")
+				out.append(  "<table border=\"1\">\n	<tr>")
+				out.append(  "\n		<th>" + cat + "</th>\n		<th>Participants</th>\n	</tr>")
 
 				for r in rumbs:
 					game = r.Name
 					gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
 
-					out.append( "\n<tr><td>" + gameHref + "</td><td>" + str(r.__dict__["entries"]) + "</td></tr>")
+					out.append( "\n	<tr>\n		<td>" + gameHref + "</td>\n		<td>" + str(r.__dict__["entries"]) + "</td>\n	</tr>")
 					memcache.set(r.Name,r)
-				out.append(  "<br><br>")
+				out.append(  "\n	<br>\n	<br>")
 			
-			out.append(  "</table>")
+			out.append(  "	</table>")
 			outstr = string.join(out,"")
 			if not timing:
 				memcache.set("home",outstr)

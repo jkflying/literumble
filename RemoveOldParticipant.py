@@ -18,7 +18,7 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 
 import structures
-from structures import global_dict
+#from structures import global_dict
 class RemoveOldParticipant(webapp.RequestHandler):
 	def get(self):
 		parts = self.request.query_string.split("&")
@@ -40,7 +40,8 @@ class RemoveOldParticipant(webapp.RequestHandler):
 		
 
 def removeFromRumble(self,requests):
-	global global_dict
+	#global global_dict
+	global_dict = {}
 	if "version" not in requests or requests["version"] is not "1":
 		return "ERROR. bad/no version"
 		
@@ -67,9 +68,11 @@ def removeFromRumble(self,requests):
 	if entry is None:
 		entry = memcache.get(keyhash)
 		if entry is None:
-			entry = structures.CachedBotEntry(structures.BotEntry.get_by_key_name(keyhash))
+			entry = structures.BotEntry.get_by_key_name(keyhash)
 			if entry is None:
-				return "ERROR. game does not exist: " + game
+				return "ERROR. name/game does not exist: " + name + "/" + game
+			else:
+				entry = structures.CachedBotEntry(entry)
 	
 	if isinstance(entry,structures.BotEntry):
 		entry = structures.CachedBotEntry(entry)
@@ -78,20 +81,24 @@ def removeFromRumble(self,requests):
 	memcache.delete(keyhash)
 		
 	entry.Active = False
-	#pset = set(rumble.Participants)#avoid duplicates etc - a bit of spring cleaning
-	#pset.discard(entry.Name)
-	scores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
-	scores.pop(name,1)
-	rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),4)
 	
-	#rumble.Participants = list(pset)
+	try:
+		scoresdicts = json.loads(zlib.decompress(rumble.ParticipantsScores))
+		scoreslist = [structures.LiteBot() for _ in scoresdicts]
+		for s,d in zip(scoreslist,scoresdicts):
+			s.__dict__.update(d)
+		scores = {s.Name:s for s in scoreslist}
+	except:
+		scores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+		
+	scores.pop(name,1)
+	#rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),4)
+	rumble.ParticipantsScores = zlib.compress(json.dumps([scores[s].__dict__ for s in scores]),4)
+	
 	
 	memcache.delete("home")
 	global_dict.pop("home",0)
-	
-	#memcache.set(entry.key().name() + "|lite", structures.LiteBot(entry))
-	#memcache.set(entry.key().name(),entry)
-	#entry.put()
+
 	memcache.set(entry.key_name,entry)
 	global_dict[entry.key_name] = entry
 	modelBot = structures.BotEntry(key_name = entry.key_name)

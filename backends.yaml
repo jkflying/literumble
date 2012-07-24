@@ -1,5 +1,5 @@
 backends:
 - name: batchratings
-  class: B4
+  class: B8
   instances: 1
   options: dynamic

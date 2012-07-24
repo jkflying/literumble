@@ -17,10 +17,11 @@ from google.appengine.api import memcache
 from operator import attrgetter
 import structures
 import zlib
-from structures import global_dict
+#from structures import global_dict
 class Rankings(webapp.RequestHandler):
 	def get(self):
-		global global_dict
+		#global global_dict
+		global_dict = {}
 		starttime = time.time()
 		query = self.request.query_string
 		query = query.replace("%20"," ")
@@ -42,6 +43,8 @@ class Rankings(webapp.RequestHandler):
 		
 		if timing:
 			extraArgs += "&timing=1"
+		if lim < 100000:
+			extraArgs += "&limit=" + str(lim)
 			
 			
 		reverseSort = True
@@ -73,68 +76,77 @@ class Rankings(webapp.RequestHandler):
 				global_dict[game] = rumble
 		
 		try:
-			botsdict = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
-			bots = botsdict.values()
-			#if len(rumble.Participants) > 0:
-				#rumble.Participants = []
-				#rumble.put()
-		#try:
-		#	print "hello"
+		#print "try json"
+			scoresdicts = json.loads(zlib.decompress(rumble.ParticipantsScores))
+			scoreslist = [structures.LiteBot() for _ in scoresdicts]
+			for s,d in zip(scoreslist,scoresdicts):
+				s.__dict__.update(d)
+			#r = {s.Name:s for s in scoreslist}
+			bots = scoreslist
+#		try:		
+#			self.response.out.write( " json worked")
 		except:
-			print "decompressed unsuccessfully"
-			botHashes = [b + "|" + game for b in rumble.Participants]
-			membots = [h for h in botHashes if h not in global_dict]
-			if len(membots) > 0:
-				bdict = memcache.get_multi(membots)
-				global_dict.update(bdict)
-			bots = [global_dict.get(h,None) for h in botHashes]
-			
-			botsdict = {}	
-			
-			missingHashes = []
-			missingIndexes = []
-			for i,b in enumerate(bots):
-				if b is None:
-					missingHashes.append(botHashes[i])
-					missingIndexes.append(i)
-				elif isinstance(b,structures.BotEntry):
-					bots[i] = structures.CachedBotEntry(b)
-					botsdict[bots[i].key_name] = bots[i]
-			
-			rmis = None
-			if len(missingHashes) > 0:
-				rmis = structures.BotEntry.get_by_key_name(missingHashes)
-				lost = False
-				
-				for i in xrange(len(missingHashes)):
-					if rmis[i] is not None:
-						bots[missingIndexes[i]] = structures.CachedBotEntry(rmis[i])
-						botsdict[missingHashes[i]] = bots[missingIndexes[i]]
-					else:
-						partSet = set(rumble.Participants)
-						partSet.discard(missingHashes[i].split("|")[0])
-						rumble.Participants = list(partSet)
-
-						lost = True
-						
-				
-				if lost:
-					bots = filter(lambda b: b is not None, bots)
-					global_dict[game] = rumble
-					memcache.set(game,rumble)
-					rumble.put()
+			try:
+#				self.response.out.write( "\ntry pickle")
+				botsdict = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+				bots = botsdict.values()
+#				print " pickle worked"
+			except:
+				print "decompressed unsuccessfully"
+				botHashes = [b + "|" + game for b in rumble.Participants]
+				membots = [h for h in botHashes if h not in global_dict]
+				if len(membots) > 0:
+					bdict = memcache.get_multi(membots)
+					global_dict.update(bdict)
 					
-			if len(botsdict) > 0:
-				#global_dict.update(botsdict)
-				memcache.set_multi(botsdict)
-			scores = {}
-			for b in bots:
-				scores[b.Name] = structures.LiteBot(b)
-			rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),1)
-			#rumble.Participants = []
-			global_dict[game] = rumble
-			memcache.set(game,rumble)
-			rumble.put()
+				bots = [global_dict.get(h,None) for h in botHashes]
+				
+				botsdict = {}	
+				
+				missingHashes = []
+				missingIndexes = []
+				for i,b in enumerate(bots):
+					if b is None:
+						missingHashes.append(botHashes[i])
+						missingIndexes.append(i)
+					elif isinstance(b,structures.BotEntry):
+						bots[i] = structures.CachedBotEntry(b)
+						botsdict[bots[i].key_name] = bots[i]
+				
+				rmis = None
+				if len(missingHashes) > 0:
+					rmis = structures.BotEntry.get_by_key_name(missingHashes)
+					lost = False
+					
+					for i in xrange(len(missingHashes)):
+						if rmis[i] is not None:
+							bots[missingIndexes[i]] = structures.CachedBotEntry(rmis[i])
+							botsdict[missingHashes[i]] = bots[missingIndexes[i]]
+						else:
+							partSet = set(rumble.Participants)
+							partSet.discard(missingHashes[i].split("|")[0])
+							rumble.Participants = list(partSet)
+
+							lost = True
+							
+					
+					if lost:
+						bots = filter(lambda b: b is not None, bots)
+						global_dict[game] = rumble
+						memcache.set(game,rumble)
+						rumble.put()
+						
+				if len(botsdict) > 0:
+					#global_dict.update(botsdict)
+					memcache.set_multi(botsdict)
+				scores = {}
+				for b in bots:
+					scores[b.Name] = structures.LiteBot(b)
+				rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),1)
+				#rumble.Participants = []
+				global_dict[game] = rumble
+				memcache.set(game,rumble)
+				rumble.put()
 			
 		retrievetime = time.time() - starttime - parsing
 		#newbots = []
@@ -160,7 +172,7 @@ class Rankings(webapp.RequestHandler):
 			order = "Vote"
 		out = []
 		out.append("<html>\n<head>\n	<title>LiteRumble - " + game + "</title>\n</head>")
-		out.append("\n<body>RANKINGS - " + string.upper(game) + " WITH " + str(len(bots)) + " BOTS<br>\n<table border=\"1\">\n	<tr>")
+		out.append("\n<body>RANKINGS - " + string.upper(game) + " WITH " + str(len(bots)) + " BOTS<br>\n<table border=\"0\" bgcolor=\"#D0D0D0\">\n	<tr>")
 		headings = ["","Competitor","APS","PWIN","ANPP","Vote","Survival","Pairings","Battles","Latest Battle"]
 		for heading in headings:
 			sortedBy = order == heading
@@ -204,7 +216,13 @@ class Rankings(webapp.RequestHandler):
 				round(100.0*bot.VoteScore)*0.01,
 				round(100.0*bot.Survival)*0.01,
 				bot.Pairings,bot.Battles,bot.LastUpload]
-			out.append("\n	<tr>")
+			
+			if rank%2 == 0:
+				color = "FFFFFF"
+			else:
+				color = "F8F8F8"
+				
+			out.append("\n	<tr bgcolor=" + color + ">")
 			for cell in cells:
 				out.append( "\n		<td>")
 				out.append(str(cell))

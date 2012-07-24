@@ -31,3 +31,5 @@ handlers:
   script: BatchRankings.application
   login: admin
 
+- url: .BotCompare
+  script: BotCompare.application

@@ -21,25 +21,52 @@ from operator import attrgetter
 import structures
 #from structures import global_dict
 
+
+def list_split(alist, split_size):
+	return [alist[i:i+split_size] for i in range(0, len(alist), split_size)]
+
+def dict_split(d, chunk_size=1):
+	return	[
+			dict(item for item in d.items()[i:i+chunk_size]) 
+			for i in range(0, len(d.items()), chunk_size)
+			]
+
 class BatchRankings(webapp.RequestHandler):
+
+           
 	def get(self):
 		#global global_dict
+		global_dict = {}
 		starttime = time.time()
 
 		q = structures.Rumble.all()
 		
 		for r in q.run():
-			if r.BatchScoresAccurate:
-				continue
 			memr = memcache.get(r.Name)
 			if memr is not None:
 				r = memr
-			scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
+			if r.BatchScoresAccurate:
+				continue	
+				
+			try:
+				scoresdicts = json.loads(zlib.decompress(r.ParticipantsScores))
+				scoreslist = [structures.LiteBot() for _ in scoresdicts]
+				for s,d in zip(scoreslist,scoresdicts):
+					s.__dict__.update(d)
+				scores = {s.Name:s for s in scoreslist}
+			except:
+				scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
 			
+
 			particHash = [p + "|" + r.Name for p in scores]
 			
 			#memHash = [h for h in particHash if p not in global_dict]
-			ppDict = memcache.get_multi(particHash)
+			particSplit = list_split(particHash,32)
+			ppDict = {}
+			for l in particSplit:
+				ppDict.update(memcache.get_multi(l))
+			
+			#ppDict = memcache.get_multi(particHash)
 			#global_dict.update(ppDict)
 			
 			bots = [ppDict.get(h,None) for h in particHash]
@@ -81,6 +108,8 @@ class BatchRankings(webapp.RequestHandler):
 			
 			botIndexes = {}
 			for i,b in enumerate(bots):
+				#b.Name = b.Name.encode('ascii')
+				#intern(b.Name)
 				botIndexes[b.Name] = i
 				b.VoteScore = 0.0
 				b.__dict__["minScore"] = 100.0
@@ -96,7 +125,8 @@ class BatchRankings(webapp.RequestHandler):
 
 					pairings = [structures.ScoreSet() for _ in pairsDicts]
 					for s,d in zip(pairings,pairsDicts):
-						s.__dict__.update(d)
+						s.__dict__.update(d)				
+
 				uzipPairs[b.Name] = pairings
 				dictPairs = {}
 				for p in pairings:
@@ -160,12 +190,15 @@ class BatchRankings(webapp.RequestHandler):
 						count += 1
 				if count > 0:
 					b.ANPP = npps/count
+				else:
+					b.ANPP = 0
 				
 			# save to cache
 			botsdict = {}
 			for b in bots:
 				pairings = uzipPairs[b.Name]
 				#b.PairingsList = zlib.compress(json.dumps([p.__dict__ for p in pairings]),4)
+				b.Pairings = len(pairings)
 				b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),4)
 				b.__dict__.pop("minScore",1)
 				b.__dict__.pop("maxScore",1)
@@ -173,16 +206,22 @@ class BatchRankings(webapp.RequestHandler):
 					botsdict[b.key_name] = b
 			
 			if len(botsdict) > 0:
-				memcache.set_multi(botsdict)
+				splitlist = dict_split(botsdict,32)
+				for d in splitlist:
+					memcache.set_multi(d)
 				#global_dict.update(botsdict)
 			
 			scores = {b.Name: structures.LiteBot(b) for b in bots}
 			
 			r.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),7)
+			#r.ParticipantsScores = zlib.compress(json.dumps([scores[s].__dict__ for s in scores]),4)
 			
 			r.BatchScoresAccurate = True
 			memcache.set(r.Name,r)
 			r.put()
+			import gc
+			gc.collect()
+			
 			#gc.collect(2)
 				
 			
