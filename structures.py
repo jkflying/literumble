@@ -50,7 +50,7 @@ class ScoreSet:
 		self.Battles = battles
 		self.LastUpload = lastUpload
 		self.KNNPBI = 0
-		self.NPP = aps
+		self.NPP = -1
 		
 class LiteBot:
 	def __init__ (self, bot = None):

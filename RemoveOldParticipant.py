@@ -19,6 +19,11 @@ from google.appengine.api import memcache
 
 import structures
 #from structures import global_dict
+
+def rreplace(s, old, new, occurrence):
+    li = s.rsplit(old, occurrence)
+    return new.join(li)
+
 class RemoveOldParticipant(webapp.RequestHandler):
 	def get(self):
 		parts = self.request.query_string.split("&")
@@ -54,7 +59,7 @@ def removeFromRumble(self,requests):
 	name = requests.get("name",None)
 	if name is None:
 		return "ERROR. no name specified"
-	name = name.replace("_"," ")
+	name = rreplace(name,"_"," ",1)
 	
 	rumble = global_dict.get(game,None)
 	if rumble is None:
