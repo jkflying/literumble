@@ -182,12 +182,12 @@ class Rankings(webapp.RequestHandler):
             if order == heading and reverseSort:
                 heading = "-" + heading
             orderl = []
-            orderl.append("<a href=Rankings?game=")
+            orderl.append("<a href=\"Rankings?game=")
             orderl.append(game)
             orderl.append("&amp;order=")
             orderl.append(heading.replace(" ","%20"))
             orderl.append(extraArgs)
-            orderl.append(">")
+            orderl.append("\">")
             orderl.append(heading)
             orderl.append("</a>")
             orderHref = ''.join(orderl)
@@ -203,14 +203,14 @@ class Rankings(webapp.RequestHandler):
                 
             botName=bot.Name
             bnh = []
-            bnh.append("<a href=BotDetails?game=")
+            bnh.append("<a href=\"BotDetails?game=")
             bnh.append(game)
             bnh.append("&amp;name=")
             bnh.append(botName.replace(" ","%20"))
             bnh.append(extraArgs)
-            bnh.append(">")
+            bnh.append("\">")
             bnh.append(botName)
-            bnh.append("</a")
+            bnh.append("</a>")
             botNameHref = ''.join(bnh) #"<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
             
             cells = [str(rank),botNameHref,

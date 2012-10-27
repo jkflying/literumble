@@ -135,7 +135,7 @@ class BotDetails(webapp.RequestHandler):
             out.append("<input type=\"hidden\" name=\"bota\" value=\"" + name + "\" />")
             out.append("<input type=\"text\" name=\"botb\" value=\"" + name + "\" />")
             out.append("<input type=\"submit\" value=\"Compare\" /></form>")
-            out.append("</td></tr></table>\n<table>\n")
+            out.append("</td></tr></table>\n<table>\n<tr>\n")
 
             headings = ["  ",
             "Name",
