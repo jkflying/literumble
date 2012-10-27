@@ -118,7 +118,7 @@ class BotDetails(webapp.RequestHandler):
             gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\">" + game + "</a>"
             gameTitle = "Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " + str(len(bots)) + " bots."
             
-            out.append(html_header % (game,gameTitle))
+            out.append(structures.html_header % (game,gameTitle))
             out.append("<table>\n")
             out.append("<tr>\n<th>Name</th>\n<td>\n" + name + "</td></tr>")
             out.append("<tr>\n<th>APS</th>\n<td>\n" + str(bot.APS) + "</td></tr>")

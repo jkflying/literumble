@@ -173,7 +173,7 @@ class Rankings(webapp.RequestHandler):
         out = []
         
         gameTitle = "RANKINGS - " + string.upper(game) + " WITH " + str(len(bots)) + " BOTS"
-        out.append(html_header % (game,gameTitle))
+        out.append(structures.html_header % (game,gameTitle))
         out.append("<table><tr>");
         
         headings = ["","Competitor","APS","PWIN","ANPP","Vote","Survival","Pairings","Battles","Latest Battle"]

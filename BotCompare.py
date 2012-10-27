@@ -158,7 +158,7 @@ class BotCompare(webapp.RequestHandler):
                 
                 gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
                 gameTitle = "Bot details of <b>" + botaName + " vs. " + botbName + "</b> in "+ gameHref + " vs. " + str(len(commonList)) + " bots."
-                out.append(html_header % (game,gameTitle))
+                out.append(structures.html_header % (game,gameTitle))
                 
                 out.append("\n<table><tr>")
                 
