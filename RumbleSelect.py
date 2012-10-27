@@ -50,7 +50,7 @@ class RumbleSelect(webapp.RequestHandler):
             #gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
             out = []
             
-            out.append(structures.html_header % (game,"LiteRumble - Home"))
+            out.append(structures.html_header % ("LiteRumble - Home","LiteRumble - Home"))
             
             q = structures.Rumble.all()
             
