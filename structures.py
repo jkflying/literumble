@@ -135,3 +135,8 @@ class Rumble(db.Model):
 	PriorityBattles = db.BooleanProperty(indexed = False, default = True)
 	BatchScoresAccurate = db.BooleanProperty(default = False)
 	ParticipantsScores = db.BlobProperty(indexed = False)
+	
+#since this file is included in all the other files, I decided to put the template header here
+# USAGE:
+#	html_header % (Title, PageTitleHeader)
+html_header = """<!DOCTYPE html><html><head><meta charset="utf-8"><title>LiteRumble - %s</title><link rel="stylesheet" type="text/css" media="all" href="style.css" /></head><body><h3>%s</h3>"""

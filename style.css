@@ -1,0 +1,41 @@
+html {
+	font-family: helvetica, arial, sans-serif;
+}
+table, td, th {
+	border: 1px solid #D3D3D3;
+	border-collapse: collapse;
+	padding: 2px 4px;
+	margin-bottom: 1em;
+}
+th > a, th > a:active, th > a:visited {
+	color: #000;
+	text-decoration: none;
+}
+th {
+	text-align: left;
+	padding-right: 1em;
+}
+tr:nth-child(odd), tr.dim {
+	background-color: #f4f4f4;
+}
+table.rumble td:nth-child(3) {
+	text-align: center;
+}
+th.sortedby {
+	font-style: italic;
+	text-decoration: underline;
+}
+h3 {
+	font-weight: normal;
+}
+form[action="BotCompare"] {
+	margin: 0px;
+	text-align: center;
+}
+/* There is a nice fancy pure css way of doing this, but it's a bit too new */
+td.green {
+	background-color: #9c0;
+}
+td.red {
+	background-color: #f60;
+}

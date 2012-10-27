@@ -51,7 +51,7 @@ class BotDetails(webapp.RequestHandler):
         
         
         if timing:
-            extraArgs += "&timing=1"
+            extraArgs += "&amp;timing=1"
         reverseSort = True
         
         if order is None:
@@ -115,30 +115,27 @@ class BotDetails(webapp.RequestHandler):
             
             out = []
             
-            gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
-            out.append( "<html><head><title>LiteRumble - " + game + "</title></head>")
-            out.append( "\n<body>Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " )
-            out.append( str(len(bots)) + " bots.<br /><br />\n<table  border=\"0\" bgcolor=\"#D0D0D0\">\n")
-            out.append("<tr bgcolor=\"F8F8F8\">\n<th>Name</th>\n<td>\n" + name + "</td></tr>")
-            out.append("<tr bgcolor=\"F8F8F8\">\n<th>APS</th>\n<td>\n" + str(bot.APS) + "</td></tr>")
-            out.append("<tr bgcolor=\"F8F8F8\">\n<th>PWIN</th>\n<td>\n" + str(50.0*float(bot.PL)/bot.Pairings + 50.0) + "</td></tr>")
-            out.append("<tr bgcolor=\"F8F8F8\">\n<th>ANPP</th>\n<td>\n" + str(bot.ANPP) + "</td></tr>")
-            out.append("<tr bgcolor=\"F8F8F8\">\n<th>Vote</th>\n<td>\n" + str(bot.VoteScore) + "</td></tr>")
-            out.append("<tr bgcolor=\"F8F8F8\">\n<th>Survival</th>\n<td>\n" + str(bot.Survival) + "</td></tr>")
-            out.append("<tr bgcolor=\"F8F8F8\">\n<th>Pairings</th>\n<td>\n" + str(bot.Pairings) + "</td></tr>")
-            out.append("<tr bgcolor=\"F8F8F8\">\n<th>Battles</th>\n<td>\n" + str(bot.Battles) + "</td></tr>")
-            out.append("<tr bgcolor=\"F8F8F8\">\n<th>Latest Battle</th>\n<td>\n" + str(bot.LastUpload) + " UTC</td></tr>")
-            out.append("<tr height=\"10%\" bgcolor=\"F8F8F8\">\n<td colspan=\"2\">")
-            out.append("<form style=\"margin: 0; text-align: center;\" name=\"input\" action=\"BotCompare\" method=\"get\">")
+            gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\">" + game + "</a>"
+            gameTitle = "Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " + str(len(bots)) + " bots."
+            
+            out.append(html_header % (game,gameTitle))
+            out.append("<table>\n")
+            out.append("<tr>\n<th>Name</th>\n<td>\n" + name + "</td></tr>")
+            out.append("<tr>\n<th>APS</th>\n<td>\n" + str(bot.APS) + "</td></tr>")
+            out.append("<tr>\n<th>PWIN</th>\n<td>\n" + str(50.0*float(bot.PL)/bot.Pairings + 50.0) + "</td></tr>")
+            out.append("<tr>\n<th>ANPP</th>\n<td>\n" + str(bot.ANPP) + "</td></tr>")
+            out.append("<tr>\n<th>Vote</th>\n<td>\n" + str(bot.VoteScore) + "</td></tr>")
+            out.append("<tr>\n<th>Survival</th>\n<td>\n" + str(bot.Survival) + "</td></tr>")
+            out.append("<tr>\n<th>Pairings</th>\n<td>\n" + str(bot.Pairings) + "</td></tr>")
+            out.append("<tr>\n<th>Battles</th>\n<td>\n" + str(bot.Battles) + "</td></tr>")
+            out.append("<tr>\n<th>Latest Battle</th>\n<td>\n" + str(bot.LastUpload) + " UTC</td></tr>")
+            out.append("<tr>\n<td colspan=\"2\">")
+            out.append("<form name=\"input\" action=\"BotCompare\" method=\"get\">")
             out.append("<input type=\"hidden\" name=\"game\" value=\"" + game+ "\" />")
             out.append("<input type=\"hidden\" name=\"bota\" value=\"" + name + "\" />")
             out.append("<input type=\"text\" name=\"botb\" value=\"" + name + "\" />")
-            out.append(" <input type=\"submit\" value=\"Compare\" /></form>")
-            out.append("</td></table><br/>\n<table  border=\"0\" bgcolor=\"#D0D0D0\">\n")
-            
-            
-            
-            
+            out.append("<input type=\"submit\" value=\"Compare\" /></form>")
+            out.append("</td></tr></table>\n<table>\n")
 
             headings = ["  ",
             "Name",
@@ -159,10 +156,11 @@ class BotDetails(webapp.RequestHandler):
                 elif not sortedBy:
                     headinglink = "-" + headinglink
                     
-                orderHref = "<a href=BotDetails?game="+game+"&name="+name.replace(" ","%20")+"&order="+ headinglink.replace(" ","%20") + extraArgs + ">"+heading+"</a>"
+                orderHref = "<a href=\"BotDetails?game="+game+"&amp;name="+name.replace(" ","%20")+"&amp;order="+ headinglink.replace(" ","%20") + extraArgs + "\">"+heading+"</a>"
                 if sortedBy:
-                    orderHref = "<i>" + orderHref + "</i>"
-                out.append(  "\n<th>" + orderHref + "</th>")
+                    out.append(  "\n<th class=\"sortedby\">" + orderHref + "</th>")
+                else:
+                    out.append(  "\n<th>" + orderHref + "</th>")
             out.append(  "\n</tr>")
             rank = 1
             highlightKey = [False,False,False,True,True,True,True,False,False]
@@ -173,8 +171,8 @@ class BotDetails(webapp.RequestHandler):
                     break
 
                 botName=bot.Name
-                botNameHref = "<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+" </a>"
-                compareHref = "<a href=BotCompare?game="+game+"&bota=" + name.replace(" ","%20") + "&botb=" + botName.replace(" ","%20") + extraArgs + "> compare</a>"
+                botNameHref = "<a href=\"BotDetails?game="+game+"&amp;name=" + botName.replace(" ","%20")+extraArgs+"\">"+botName+" </a>"
+                compareHref = "<a href=\"BotCompare?game="+game+"&amp;bota=" + name.replace(" ","%20") + "&amp;botb=" + botName.replace(" ","%20") + extraArgs + "\"> compare</a>"
                 cells = [str(rank),
                 botNameHref,
                 compareHref,
@@ -184,18 +182,14 @@ class BotDetails(webapp.RequestHandler):
                 round(100.0*bot.KNNPBI)*0.01,
                 bot.Battles,
                 bot.LastUpload]
-                if rank%2 == 0:
-                    color = "FFFFFF"
-                else:
-                    color = "F8F8F8"
-                    
-                out.append("\n    <tr bgcolor=" + color + ">")
+                
+                out.append("\n<tr>")
                 for i,cell in enumerate(cells):
                     if highlightKey[i]:
                         if cell < mins[i]:
-                            out.append(  "\n<td bgcolor=\"FF6600\">" + str(cell) + "</td>")
+                            out.append(  "\n<td class=\"red\">" + str(cell) + "</td>")
                         elif cell > maxs[i]:
-                            out.append(  "\n<td bgcolor=\"99CC00\">" + str(cell) + "</td>")
+                            out.append(  "\n<td class=\"green\">" + str(cell) + "</td>")
                         else:
                             out.append(  "\n<td>" + str(cell) + "</td>")
                     else:
