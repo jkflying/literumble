@@ -146,9 +146,9 @@ class BotCompare(webapp.RequestHandler):
                         commonList.append(structures.ComparePair(ba,bb))
                 
                 
-                order = order.replace(" ","_")
-                commonList = sorted(commonList, key=attrgetter(order), reverse=reverseSort)
-                order = order.replace("_"," ")
+                sortorder = order.replace(" ","_").replace("(","").replace(")","")
+                commonList = sorted(commonList, key=attrgetter(sortorder), reverse=reverseSort)
+                #order = order.replace("_"," ")
                 
                 sorttime = time.time() - retrievetime - parsetime - starttime
                 if order == "LastUpload":
