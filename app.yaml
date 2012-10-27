@@ -23,6 +23,10 @@ handlers:
 - url: /favicon.ico
   static_files: favicon.ico
   upload: favicon.ico
+  
+- url: /style.css
+  static_files: style.css
+  upload: style.css
 
 - url: /
   script: RumbleSelect.application
