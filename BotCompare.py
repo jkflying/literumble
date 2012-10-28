@@ -146,8 +146,10 @@ class BotCompare(webapp.RequestHandler):
                         commonList.append(structures.ComparePair(ba,bb))
                 
                 
-                sortorder = order.replace(" ","_").replace("(","").replace(")","")
-                commonList = sorted(commonList, key=attrgetter(sortorder), reverse=reverseSort)
+                sortOrder = order.replace(" ","_").replace("(","").replace(")","")
+                if len(sortOrder) > 2 and sortOrder[-2] == "_":
+                    sortOrder = sortOrder[-1] + "_" + sortOrder[0:-2]
+                commonList = sorted(commonList, key=attrgetter(sortOrder), reverse=reverseSort)
                 #order = order.replace("_"," ")
                 
                 sorttime = time.time() - retrievetime - parsetime - starttime
