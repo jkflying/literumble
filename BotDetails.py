@@ -134,7 +134,7 @@ class BotDetails(webapp.RequestHandler):
             out.append("<input type=\"hidden\" name=\"game\" value=\"" + game+ "\" />")
             out.append("<input type=\"hidden\" name=\"bota\" value=\"" + name + "\" />")
             out.append("<input type=\"text\" name=\"botb\" value=\"" + name + "\" />")
-            out.append("<input type=\"submit\" value=\"Compare\" /></form>")
+            out.append("<input type=\"submit\" value=\"Compare\" formtarget=\"_blank\" /></form>")
             out.append("</td></tr></table>\n<table>\n<tr>\n")
 
             headings = ["  ",
@@ -172,7 +172,7 @@ class BotDetails(webapp.RequestHandler):
 
                 botName=bot.Name
                 botNameHref = "<a href=\"BotDetails?game="+game+"&amp;name=" + botName.replace(" ","%20")+extraArgs+"\">"+botName+" </a>"
-                compareHref = "<a href=\"BotCompare?game="+game+"&amp;bota=" + name.replace(" ","%20") + "&amp;botb=" + botName.replace(" ","%20") + extraArgs + "\"> compare</a>"
+                compareHref = "<a href=\"BotCompare?game="+game+"&amp;bota=" + name.replace(" ","%20") + "&amp;botb=" + botName.replace(" ","%20") + extraArgs + "\" target=\"_blank\">compare</a>"
                 cells = [str(rank),
                 botNameHref,
                 compareHref,

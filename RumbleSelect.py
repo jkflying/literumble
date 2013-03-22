@@ -92,8 +92,8 @@ class RumbleSelect(webapp.RequestHandler):
                 
                 for i,r in enumerate(rumbs):
                     game = r.Name
-                    gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\">" + game + "</a>"
-                    topHref = "<a href=\"Rankings?game=" + game +"&amp;limit=50"+ extraArgs + "\">top 50</a>"
+                    gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\" target=\"_blank\">" + game + "</a>"
+                    topHref = "<a href=\"Rankings?game=" + game +"&amp;limit=50"+ extraArgs + "\" target=\"_blank\">top 50</a>"
                         
                     out.append( "\n<tr>\n<td>" + gameHref + "</td>\n<td>" + topHref + "</td>\n<td>")
                     out.append(str(r.__dict__["entries"]) + "</td>\n</tr>")

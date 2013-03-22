@@ -174,7 +174,7 @@ class Rankings(webapp.RequestHandler):
         
         gameTitle = "RANKINGS - " + string.upper(game) + " WITH " + str(len(bots)) + " BOTS"
         out.append(structures.html_header % (game,gameTitle))
-        out.append("<table><tr>");
+        out.append("\n<table>\n<tr>");
         
         headings = ["","Competitor","APS","PWIN","ANPP","Vote","Survival","Pairings","Battles","Latest Battle"]
         for heading in headings:
@@ -208,7 +208,7 @@ class Rankings(webapp.RequestHandler):
             bnh.append("&amp;name=")
             bnh.append(botName.replace(" ","%20"))
             bnh.append(extraArgs)
-            bnh.append("\">")
+            bnh.append("\" target=\"_blank\">")
             bnh.append(botName)
             bnh.append("</a>")
             botNameHref = ''.join(bnh) #"<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
