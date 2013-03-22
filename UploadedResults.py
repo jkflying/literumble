@@ -308,7 +308,7 @@ class UploadedResults(webapp.RequestHandler):
                 if game.Melee:
                     uploadsize = game.MeleeSize -1
                 else:
-                    uploadsize = 100
+                    uploadsize = 30
                 
                 updates = min(len(sync),sorted(sync.values())[-min(len(sync),game.MeleeSize*10)])
                     
@@ -407,6 +407,8 @@ class UploadedResults(webapp.RequestHandler):
                 
                 priobot = None
                 priopairs = None
+                
+                # this just does a gradient descent... let's do a direct search since we alread have the data
                 if bots[0].Pairings < bots[1].Pairings:
                     priobot = bots[0]
                     priopairs = pairingsarray[0]
@@ -422,6 +424,12 @@ class UploadedResults(webapp.RequestHandler):
                 else:
                     priobot = bots[1]
                     priopairs = pairingsarray[1]
+                
+               # prioPack = [s for s in scores if s.Pairings < len(scores)-1 ]  
+               # if len(prioPack) > 0:
+                    
+                
+                
                 
                 priobot2 = None
                 if priobot.Pairings < len(scores) - 1:
