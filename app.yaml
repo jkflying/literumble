@@ -8,6 +8,9 @@ handlers:
 - url: .UploadedResults
   script: UploadedResults.application
 
+- url: /flags
+  static_dir: flags
+
 - url: .Rankings
   script: Rankings.application
   
