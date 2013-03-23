@@ -42,6 +42,11 @@ class BatchRankings(webapp.RequestHandler):
 		q = structures.Rumble.all()
 		
 		for r in q.run():
+               #clear garbage before loading lots of data!
+               import gc
+			gc.collect()			
+			gc.collect(2)
+   
 			memr = memcache.get(r.Name)
 			if memr is not None:
 				r = memr
@@ -49,13 +54,15 @@ class BatchRankings(webapp.RequestHandler):
 				continue	
 				
 			try:
+				scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
+			except:
 				scoresdicts = json.loads(zlib.decompress(r.ParticipantsScores))
 				scoreslist = [structures.LiteBot() for _ in scoresdicts]
 				for s,d in zip(scoreslist,scoresdicts):
 					s.__dict__.update(d)
 				scores = {s.Name:s for s in scoreslist}
-			except:
-				scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
+
+
 			
 
 			particHash = [p + "|" + r.Name for p in scores]
@@ -106,6 +113,8 @@ class BatchRankings(webapp.RequestHandler):
 
 			bots = filter(lambda b: b is not None, bots)
 			
+               gc.collect()   
+   
 			botIndexes = {}
 			for i,b in enumerate(bots):
 				#b.Name = b.Name.encode('ascii')
@@ -134,6 +143,7 @@ class BatchRankings(webapp.RequestHandler):
 				uzipDictPairs[b.Name] = dictPairs
 				botsdict[b.Name] = b
 				
+               gc.collect()
 			#Vote
 			for b in bots:
 				pairings = uzipPairs[b.Name]	
@@ -219,10 +229,9 @@ class BatchRankings(webapp.RequestHandler):
 			r.BatchScoresAccurate = True
 			memcache.set(r.Name,r)
 			r.put()
-			import gc
-			gc.collect()
+               gc.collect()
+   
 			
-			#gc.collect(2)
 				
 			
 		elapsed = time.time() - starttime	
