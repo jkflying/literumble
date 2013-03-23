@@ -327,8 +327,7 @@ class UploadedResults(webapp.RequestHandler):
                 
                 botsDict = {}
                 for b in bots:
-                        if b.key_name in sync:
-                            botdict[b.key_name] = b
+                    botdict[b.key_name] = b
                             
                 if len(sync.values()) > uploadsize:
                     syncset = sync.keys()
@@ -414,8 +413,7 @@ class UploadedResults(webapp.RequestHandler):
                                     
                 global_dict.update(botsDict)    
                 for b in bots:
-                    if b.key_name in sync:
-                        botdict[b.key_name] = b
+                    botsDict[b.key_name] = b
                 memcache.set_multi(botsDict)
 
             
