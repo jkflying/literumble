@@ -60,8 +60,11 @@ class UploadedResults(webapp.RequestHandler):
             
             if rumble not in locks:
                 locks[rumble] = threading.Lock()
+           #if "global" not in locks:
+               #locks["global"] = threading.Lock()
                 
             with locks[rumble]:
+            #if True:
                 game = memcache.get(rumble)            
                 if game is None:
                     game = global_dict.get(rumble,None)    
@@ -103,14 +106,14 @@ class UploadedResults(webapp.RequestHandler):
                 try:
                     scores = pickle.loads(zlib.decompress(game.ParticipantsScores))
                 except:
-                    #try:
+                    try:
                         scoresdicts = json.loads(zlib.decompress(game.ParticipantsScores))
                         scoreslist = [structures.LiteBot() for _ in scoresdicts]
                         for s,d in zip(scoreslist,scoresdicts):
                             s.__dict__.update(d)
                         scores = {s.Name:s for s in scoreslist}
-                    #except:
-                    #    scores = {}
+                    except:
+                        scores = {}
                     
                 newBot = False
                 bota = results["fname"]
@@ -318,8 +321,8 @@ class UploadedResults(webapp.RequestHandler):
                     syncset = sync.keys()
                     if game.Melee:
                         syncset = filter(lambda b: sync[b] >= game.MeleeSize-1,syncset)
-                    else:
-                        syncset = filter(lambda b: sync[b] >= 1,syncset)
+                   # else:
+                      #  syncset = filter(lambda b: sync[b] >= 1,syncset)
                         
                     if(len(syncset) > 30):
                         syncset = syncset[0:30]
@@ -337,7 +340,7 @@ class UploadedResults(webapp.RequestHandler):
                             else:
                                 syncbots.append(b)
                                 
-                        if len(syncbots) >= 10:
+                        if len(syncbots) >= 2:
                             sizelim = 800000
                             try:
                                 while len(syncbots) > 0:
@@ -356,7 +359,7 @@ class UploadedResults(webapp.RequestHandler):
                                         thisput.append(putb)
                                         num -= 1
                                     #try:
-                                    db.put(thisput)
+                                    db.put_async(thisput)
                                     for b in thisput:
                                         sync.pop(b.key().name(),1)
                                         global_dict.pop(b.key().name(),1)
