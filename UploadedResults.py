@@ -319,7 +319,7 @@ class UploadedResults(webapp.RequestHandler):
                     if game.Melee:
                         syncset = filter(lambda b: sync[b] >= game.MeleeSize-1,syncset)
                     else:
-                        syncset = filter(lambda b: sync[b] >= 5,syncset)
+                        syncset = filter(lambda b: sync[b] >= 1,syncset)
                         
                     if(len(syncset) > 30):
                         syncset = syncset[0:30]
