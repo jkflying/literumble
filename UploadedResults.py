@@ -20,6 +20,7 @@ import zlib
 import threading
 
 import structures
+import logging
 #from structures import global_dict
 
 locks = {}
@@ -53,11 +54,14 @@ class UploadedResults(webapp.RequestHandler):
             results[ab[0]] = ab[1]
         
         client = results["client"]
+        user = results["user"]
         
         version = results["version"]
         if version in allowed_versions and client in allowed_clients:
             rumble = results["game"]
             
+            logging.debug("game: " + rumble)
+            logging.debug("user: " + user)
             if rumble not in locks:
                 locks[rumble] = threading.Lock()
            #if "global" not in locks:
@@ -65,14 +69,16 @@ class UploadedResults(webapp.RequestHandler):
                 
             with locks[rumble]:
             #if True:
-                game = memcache.get(rumble)            
+
+                game = global_dict.get(rumble,None)    
                 if game is None:
-                    game = global_dict.get(rumble,None)    
+                    game = memcache.get(rumble)
                     if game is None:
                         game = structures.Rumble.get_by_key_name(rumble)
+                        if game is not None:
+                            global_dict[game] = rumble
+                    else:
                         global_dict[game] = rumble
-                else:
-                    global_dict[game] = rumble
                     
                 if game is None:
                     game = structures.Rumble(key_name = rumble,
@@ -82,6 +88,7 @@ class UploadedResults(webapp.RequestHandler):
                     MeleeSize = 10, ParticipantsScores = zlib.compress(json.dumps([])))
                     self.response.out.write("CREATED NEW GAME TYPE " + rumble + "\n")
                     global_dict[game] = rumble
+                    logging.info("Created new game type: " + rumble)
                 else:
                     field = game.Field == results["field"]
                     rounds = (game.Rounds == int(results["rounds"]))
@@ -118,6 +125,7 @@ class UploadedResults(webapp.RequestHandler):
                 newBot = False
                 bota = results["fname"]
                 botb = results["sname"]
+                logging.debug("Bots : " + bota + " vs. " + botb)
                 
                 bd = [[bota, rumble], [botb, rumble]]
                 
@@ -139,6 +147,7 @@ class UploadedResults(webapp.RequestHandler):
                         modelbot = structures.BotEntry.get_by_key_name(botHashes[i])
                         if modelbot is not None:
                             bots[i] = structures.CachedBotEntry(modelbot)
+                            logging.debug("retrieved from database")
                             
                     if bots[i] is None:
                         modelbot = structures.BotEntry(key_name = botHashes[i],
@@ -178,6 +187,7 @@ class UploadedResults(webapp.RequestHandler):
                         scores[bots[i].Name] = structures.LiteBot(bots[i])
                         newBot = True
                         self.response.out.write("Added " + bd[i][0] + " to " + rumble + "\n")
+                        logging.info("added new bot!")
                 
                         
                 retrievetime = time.time() - starttime
@@ -228,8 +238,8 @@ class UploadedResults(webapp.RequestHandler):
                         i += 1
                     b.Pairings = i
                 
-                botaPairs = bots[0].Pairings
-                botbPairs = bots[1].Pairings
+                #botaPairs = bots[0].Pairings
+                #botbPairs = bots[1].Pairings
                 
                 aBattles = apair.Battles
                 bBattles = bpair.Battles
@@ -238,8 +248,9 @@ class UploadedResults(webapp.RequestHandler):
                 apair.APS *= float(aBattles)/(aBattles + 1)
                 apair.APS += APSa/(aBattles+1)
                 
-                bpair.APS *= float(bBattles)/(bBattles + 1)
-                bpair.APS += APSb/(bBattles+1)
+                #bpair.APS *= float(bBattles)/(bBattles + 1)
+                #bpair.APS += APSb/(bBattles+1)
+                bpair.APS = 100 - apair.APS
                 
                 apair.Survival *= float(aBattles)/(aBattles + 1)
                 apair.Survival += survivala/(aBattles+1)
@@ -248,7 +259,7 @@ class UploadedResults(webapp.RequestHandler):
                 bpair.Survival += survivalb/(bBattles+1)
                 
                 apair.Battles += 1
-                bpair.Battles += 1
+                bpair.Battles = apair.Battles
                 
                 apair.LastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 bpair.LastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -312,14 +323,16 @@ class UploadedResults(webapp.RequestHandler):
                     uploadsize = game.MeleeSize -1
                 else:
                     uploadsize = 30
+                minSize = min(60,len(scores)/2)
                 
-                updates = min(len(sync),sorted(sync.values())[-min(len(sync),game.MeleeSize*10)])
-                    
-                wrote = False
-                syncsize = -1
-                if (game.Melee and updates >= uploadsize and len(sync) >= game.MeleeSize) or (not game.Melee and sum(sync.values()) > uploadsize):
+                botsDict = {}
+                for b in bots:
+                        if b.key_name in sync:
+                            botdict[b.key_name] = b
+                            
+                if len(sync.values()) > uploadsize:
                     syncset = sync.keys()
-                    minSize = min(30,len(scores)/2)
+                    
                     if game.Melee:
                         syncset = filter(lambda b: sync[b] >= game.MeleeSize-1,syncset)
                         #minSize = game.MeleeSize * 3
@@ -343,18 +356,18 @@ class UploadedResults(webapp.RequestHandler):
                                 syncbots.append(b)
                                 
                         if len(syncbots) >= minSize:
-                            sizelim = 800000
+                            #sizelim = 800000
                             try:
                                 while len(syncbots) > 0:
-                                    size = 0
-                                    num = 30
+                                    #size = 0
+                                    num = 60
                                     thisput = []
                                     while len(syncbots) > 0 and num > 0:
                                         b = syncbots[-1]
-                                        l = len(pickle.dumps(b,-1))
-                                        if l+size > sizelim:
-                                            break
-                                        size += l
+                                       # l = len(pickle.dumps(b,-1))
+                                        #if l+size > sizelim:
+                                         #   break
+                                        #size += l
                                         syncbots.pop(-1)
                                         putb = structures.BotEntry(key_name = b.key_name)
                                         putb.init_from_cache(b)
@@ -362,9 +375,13 @@ class UploadedResults(webapp.RequestHandler):
                                         num -= 1
                                     #try:
                                     db.put(thisput)
+                                    
+                                    logging.info("wrote " + str(len(thisput)) + " results to database")
                                     for b in thisput:
-                                        sync.pop(b.key().name(),1)
-                                        global_dict.pop(b.key().name(),1)
+                                        s = b.key().name()
+                                        sync.pop(s,1)
+                                        global_dict.pop(s,1)
+                                        botsDict.pop(s,1)
                                     #except:
                                     #    self.response.out.write("\nERROR WRITING DATA!! QUOTA REACHED?")
                             except:
@@ -392,13 +409,14 @@ class UploadedResults(webapp.RequestHandler):
                     #db.put(bots)
                     memcache.delete("home")
                     
-                botdict = {rumble:game,syncname:zlib.compress(json.dumps(sync),1)}
+                infodict = {rumble:game,syncname:zlib.compress(json.dumps(sync),1)}
+                botsDict.update(infodict)
+                                    
+                global_dict.update(botsDict)    
                 for b in bots:
                     if b.key_name in sync:
                         botdict[b.key_name] = b
-                
-                global_dict.update(botdict)    
-                memcache.set_multi(botdict)
+                memcache.set_multi(botsDict)
 
             
             puttime = time.time() - scorestime - retrievetime - starttime
@@ -414,15 +432,19 @@ class UploadedResults(webapp.RequestHandler):
                 priopairs = None
                 
                 # this just does a gradient descent... let's do a direct search since we alread have the data
+                priobot2 = None                                
                 if bots[0].Pairings < bots[1].Pairings:
                     priobot = bots[0]
                     priopairs = pairingsarray[0]
                 elif bots[0].Pairings > bots[1].Pairings:
                     priobot = bots[1]
                     priopairs = pairingsarray[1]
-                #elif min([b.Pairings for b in scores.values()]) < len(scores) - 1:
-                #    possBots = filter(lambda b: b.Pairings < bots[0].Pairings,scores)
-                    
+                elif min([b.Pairings for b in scores.values()]) < len(scores) - 1:
+                    scoreVals = scores.values()
+                    maxPairs = len(scoreVals) - 1
+                    possBots = filter(lambda b: b.Pairings < maxPairs,scoreVals)
+                    priobot = random.choice(possBots)
+                    priobot2 = random.choice(scoreVals).Name
                 elif bots[0].Battles <= bots[1].Battles:
                     priobot = bots[0]
                     priopairs = pairingsarray[0]
@@ -436,35 +458,35 @@ class UploadedResults(webapp.RequestHandler):
                 
                 
                 
-                priobot2 = None
-                if priobot.Pairings < len(scores) - 1:
-                    #create the first battle of a new pairing
-                    
-                    #cache pairings into dictionary to speed lookups against entire rumble
-                    pairsdict = {}
-                    for b in priopairs:
-                        pairsdict[b.Name] = b
-                    
-                    #select all unpaired bots
-                    possPairs = []
-                    for p in scores:
-                        if p not in pairsdict and p != priobot.Name:
-                            possPairs.append(p)
-                            
-                    if len(possPairs) > 0:
-                        #choose a random new pairing to prevent overlap
-                        priobot2 = random.choice(possPairs)
-                            
-                                
-                else:
-                    #sort for lowest battled pairing
-                    #priopairs = sorted(priopairs, key = lambda score: score.Battles)
-                    minbat = min([p.Battles for p in priopairs])
-                    possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name,priopairs)
-                    while priobot2 is None:
+                if priobot2 is None:
+                    if priobot.Pairings < len(scores) - 1:
+                        #create the first battle of a new pairing
                         
-                        priobot2 = random.choice(possPairs).Name
-                        #choose low battles, but still random - prevents lots of duplicates
+                        #cache pairings into dictionary to speed lookups against entire rumble
+                        pairsdict = {}
+                        for b in priopairs:
+                            pairsdict[b.Name] = b
+                        
+                        #select all unpaired bots
+                        possPairs = []
+                        for p in scores:
+                            if p not in pairsdict and p != priobot.Name:
+                                possPairs.append(p)
+                                
+                        if len(possPairs) > 0:
+                            #choose a random new pairing to prevent overlap
+                            priobot2 = random.choice(possPairs)
+                                
+                                    
+                    else:
+                        #sort for lowest battled pairing
+                        #priopairs = sorted(priopairs, key = lambda score: score.Battles)
+                        minbat = min([p.Battles for p in priopairs])
+                        possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name,priopairs)
+                        while priobot2 is None:
+                            
+                            priobot2 = random.choice(possPairs).Name
+                            #choose low battles, but still random - prevents lots of duplicates
                         
                         
                 if priobot is not None and priobot2 is not None:    
