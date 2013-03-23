@@ -125,7 +125,7 @@ class UploadedResults(webapp.RequestHandler):
                 for b in botHashes:
                     intern(b)
                     
-                syncname = rumble + "|" + structures.sync
+                syncname = str(game.Melee) + "|" + structures.sync
                 getHashes = botHashes + [syncname]
                 
                 botdict = memcache.get_multi(getHashes)
@@ -319,14 +319,16 @@ class UploadedResults(webapp.RequestHandler):
                 syncsize = -1
                 if (game.Melee and updates >= uploadsize and len(sync) >= game.MeleeSize) or (not game.Melee and sum(sync.values()) > uploadsize):
                     syncset = sync.keys()
+                    minSize = min(30,len(scores)/2)
                     if game.Melee:
                         syncset = filter(lambda b: sync[b] >= game.MeleeSize-1,syncset)
+                        #minSize = game.MeleeSize * 3
                    # else:
                       #  syncset = filter(lambda b: sync[b] >= 1,syncset)
-                        
-                    if(len(syncset) > 30):
-                        syncset = syncset[0:30]
-                    if len(syncset) >= 1:
+
+                    if(len(syncset) > minSize):
+                        syncset = syncset[0:minSize]
+                    if len(syncset) >= minSize:
                         syncbotsDict = memcache.get_multi(syncset)
                         global_dict.update(syncbotsDict)
                             
@@ -340,7 +342,7 @@ class UploadedResults(webapp.RequestHandler):
                             else:
                                 syncbots.append(b)
                                 
-                        if len(syncbots) >= 2:
+                        if len(syncbots) >= minSize:
                             sizelim = 800000
                             try:
                                 while len(syncbots) > 0:
@@ -359,7 +361,7 @@ class UploadedResults(webapp.RequestHandler):
                                         thisput.append(putb)
                                         num -= 1
                                     #try:
-                                    db.put_async(thisput)
+                                    db.put(thisput)
                                     for b in thisput:
                                         sync.pop(b.key().name(),1)
                                         global_dict.pop(b.key().name(),1)
@@ -390,7 +392,7 @@ class UploadedResults(webapp.RequestHandler):
                     #db.put(bots)
                     memcache.delete("home")
                     
-                botdict = {rumble:game,rumble + "|" + structures.sync:zlib.compress(json.dumps(sync),1)}
+                botdict = {rumble:game,syncname:zlib.compress(json.dumps(sync),1)}
                 for b in bots:
                     if b.key_name in sync:
                         botdict[b.key_name] = b
