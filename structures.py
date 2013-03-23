@@ -114,12 +114,17 @@ class BotEntry(db.Model):
 	ANPP = db.FloatProperty(indexed = False, default = 0.0)
 	
 	
-class Uploader(db.Model):
-	#NC = db.StringProperty() --> key_name
-	Name = db.StringProperty(indexed = False)
-	Client = db.StringProperty(indexed = False)
-	LastUpload = db.DateTimeProperty(indexed = False)
-	TotalUploads = db.IntegerProperty(indexed = False)
+#class Uploader(db.Model):
+#	#NC = db.StringProperty() --> key_name
+#	Name = db.StringProperty(indexed = False)
+#	Client = db.StringProperty(indexed = False)
+#	LastUpload = db.DateTimeProperty(indexed = False)
+#	TotalUploads = db.IntegerProperty(indexed = False)
+class User:
+    def __init__(self,name,total=0,latest=datetime.datetime.now()):
+        self.name = name
+        self.total = total
+        self.latest = latest
 	
 class Rumble(db.Model):
 	#NRFTM = db.StringProperty() --> key_name
@@ -136,7 +141,8 @@ class Rumble(db.Model):
 	BatchScoresAccurate = db.BooleanProperty(default = False)
 	ParticipantsScores = db.BlobProperty(indexed = False)
 	
-#since this file is included in all the other files, I decided to put the template header here
+
+
 # USAGE:
 #	html_header % (Title, PageTitleHeader)
 html_header = """<!DOCTYPE html><html><head><meta charset="utf-8"><title>LiteRumble - %s</title><link rel="stylesheet" type="text/css" media="all" href="style.css" /></head><body><h3>%s</h3>"""
