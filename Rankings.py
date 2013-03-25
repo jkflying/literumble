@@ -253,7 +253,7 @@ class Rankings(webapp.RequestHandler):
                 bnh.append("&amp;name=")
                 bnh.append(botName.replace(" ","%20"))
                 bnh.append(extraArgs)
-                bnh.append("\" target=\"_blank\">")
+                bnh.append("\" >")
                 bnh.append(botName)
                 bnh.append("</a>")
                 botNameHref = ''.join(bnh) #"<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
