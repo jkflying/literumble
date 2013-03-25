@@ -1,17 +1,20 @@
 #!/usr/bin/env python
-import cgi
+#import cgi
 import datetime
-import wsgiref.handlers
+#import wsgiref.handlers
 try:
     import json
 except:
     import simplejson as json
-import string
-import time
+#import string
+#import time
+import zlib
+
+import cPickle as pickle
 
 from google.appengine.ext import db
-from google.appengine.api import users
-from google.appengine.ext import webapp
+#from google.appengine.api import users
+#from google.appengine.ext import webapp
 
 total = "TOTAL"
 participants = "PARTICIPANTS"
@@ -141,6 +144,18 @@ class Rumble(db.Model):
 	BatchScoresAccurate = db.BooleanProperty(default = False)
 	ParticipantsScores = db.BlobProperty(indexed = False)
 	
+default_flag_map = "FLAGMAP"
+allowed_flags = set(['ABW', 'AFG', 'AGO', 'AIA', 'ALA', 'ALB', 'AND', 'ARE', 
+                     'ARG', 'ARM', 'ASM', 'ATA', 'ATF', 'ATG', 'AUS', 'AUT', 
+                     'AZE', 'BDI', 'ANK', 'BRA', 'CAN', 'CHE', 'CZE', 'DEU', 
+                     'ESP', 'FIN', 'FRA', 'GBR', 'HUN', 'IRL', 'ITA', 'JPN', 
+                     'KOR', 'LTU', 'NLD', 'NOR', 'POL', 'PRT', 'RUS', 'SGP', 
+                     'SRB', 'SWE', 'THA', 'USA', 'VEN', 'WIKI', 'ZAF'])
+
+class FlagMap(db.Model):
+    #key_name is ALWAYS FLAGMAP
+    InternalMap = db.BlobProperty(indexed = False, default = db.Blob(zlib.compress(pickle.dumps({}))))
+
 
 
 # USAGE:
