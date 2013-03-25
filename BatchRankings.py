@@ -224,7 +224,7 @@ class BatchRankings(webapp.RequestHandler):
             
             scores = {b.Name: structures.LiteBot(b) for b in bots}
             
-            r.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),7)
+            r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),7))
             #r.ParticipantsScores = zlib.compress(json.dumps([scores[s].__dict__ for s in scores]),4)
             
             r.BatchScoresAccurate = True

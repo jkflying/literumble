@@ -84,7 +84,7 @@ class UploadedResults(webapp.RequestHandler):
                     Name = rumble, Rounds = int(results["rounds"]),
                     Field = results["field"], Melee = bool(results["melee"] == "YES"),
                     Teams = bool(results["teams"] == "YES"), TotalUploads = 0,
-                    MeleeSize = 10, ParticipantsScores = zlib.compress(pickle.dumps([])))
+                    MeleeSize = 10, ParticipantsScores = db.Blob(zlib.compress(pickle.dumps([]))))
                     self.response.out.write("CREATED NEW GAME TYPE " + rumble + "\n")
                     global_dict[game] = rumble
                     logging.info("Created new game type: " + rumble)
@@ -399,7 +399,7 @@ class UploadedResults(webapp.RequestHandler):
                         scores.pop(b.Name,1)
                     scores[b.Name] = structures.LiteBot(b)
                 
-                game.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),1)
+                game.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),1))
                 #game.ParticipantsScores = zlib.compress(json.dumps([scores[s].__dict__ for s in scores]),4)
                 game.Participants = []
                 
@@ -423,8 +423,9 @@ class UploadedResults(webapp.RequestHandler):
 
             
            # puttime = time.time() - scorestime - retrievetime - starttime
-            
-            if game.PriorityBattles and ((not game.Melee) or (game.Melee and random.random() < 0.0222)): # or min(bots, key = lambda b: b.Battles) < game.AvgBattles):
+            scoreVals = scores.values()
+            maxPairs = len(scoreVals) - 1           
+            if game.PriorityBattles and ((not game.Melee) or (game.Melee and (random.random() < 0.0222 or min([bots[0].Pairings,bots[1].Pairings]) < maxPairs))): # or min(bots, key = lambda b: b.Battles) < game.AvgBattles):
                 #do a gradient descent to the lowest battled pairings:
                 #1: take the bot of this pair which has less pairings/battles
                 #2: find an empty pairing or take a low pairing
@@ -435,8 +436,7 @@ class UploadedResults(webapp.RequestHandler):
                 priopairs = None
                 
                 # this just does a gradient descent... let's do a direct search since we alread have the data
-                scoreVals = scores.values()
-                maxPairs = len(scoreVals) - 1
+
                 priobot2 = None                                
                 if bots[0].Pairings < maxPairs:
                     priobot = bots[0]
