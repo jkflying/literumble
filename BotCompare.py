@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import cgi
-import datetime
+#import cgi
+#import datetime
 import wsgiref.handlers
 import time
 try:
@@ -13,7 +13,7 @@ import zlib
 import cPickle as pickle
 
 from google.appengine.ext import db
-from google.appengine.api import users
+#from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from operator import attrgetter
