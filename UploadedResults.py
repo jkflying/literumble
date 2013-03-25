@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import cgi
+#import cgi
 import datetime
 import wsgiref.handlers
 try:
@@ -10,10 +10,10 @@ import string
 import cPickle as pickle
 #import pickle
 from google.appengine.ext import db
-from google.appengine.api import users
+#from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
-from operator import attrgetter
+#from operator import attrgetter
 import random
 import time
 import zlib
@@ -21,19 +21,18 @@ import threading
 
 import structures
 import logging
-#from structures import global_dict
+from structures import global_dict
 
 locks = {}
 
-allowed_clients = ["1.7.4.2"]
+allowed_clients = ["1.7.4.2", "1.8.1.0 Alpha 7", "1.8.1.0"]
 allowed_versions = ["1"]
 
 
 class UploadedResults(webapp.RequestHandler):
     def post(self):
-        
-        #global global_dict
-        global_dict = {}
+        global global_dict
+        #global_dict = {}
         starttime = time.time()
         post_body = self.request.body
         #if self.request.headers.get("Content-Encoding","ascii") == "gzip":
@@ -85,7 +84,7 @@ class UploadedResults(webapp.RequestHandler):
                     Name = rumble, Rounds = int(results["rounds"]),
                     Field = results["field"], Melee = bool(results["melee"] == "YES"),
                     Teams = bool(results["teams"] == "YES"), TotalUploads = 0,
-                    MeleeSize = 10, ParticipantsScores = zlib.compress(json.dumps([])))
+                    MeleeSize = 10, ParticipantsScores = zlib.compress(pickle.dumps([])))
                     self.response.out.write("CREATED NEW GAME TYPE " + rumble + "\n")
                     global_dict[game] = rumble
                     logging.info("Created new game type: " + rumble)
@@ -142,13 +141,19 @@ class UploadedResults(webapp.RequestHandler):
                 bots = [global_dict.get(h,None) for h in botHashes]
                 
                 pairingsarray = [[],[]]
+                botFutures = [None,None]
                 for i in [0, 1]:
                     if bots[i] is None or bots[i].PairingsList is None:
-                        modelbot = structures.BotEntry.get_by_key_name(botHashes[i])
+                        botFutures[i] = db.get_async(db.Key.from_path('BotEntry',botHashes[i]))
+
+                for i in [0,1]:
+                    if botFutures[i] is not None:                        
+                        modelbot = botFutures[i].get_result()
                         if modelbot is not None:
                             bots[i] = structures.CachedBotEntry(modelbot)
                             logging.debug("retrieved from database")
                             
+                for i in [0,1]:
                     if bots[i] is None:
                         modelbot = structures.BotEntry(key_name = botHashes[i],
                                 Name = bd[i][0],Battles = 0, Pairings = 0, APS = 0.0,
@@ -190,7 +195,7 @@ class UploadedResults(webapp.RequestHandler):
                         logging.info("added new bot!")
                 
                         
-                retrievetime = time.time() - starttime
+                #retrievetime = time.time() - starttime
                 
                 scorea = float(results["fscore"])
                 scoreb = float(results["sscore"])
@@ -200,7 +205,7 @@ class UploadedResults(webapp.RequestHandler):
                     APSa = 100*scorea/(scorea+scoreb)
                 else:
                     APSa = 50#register a 0/0 as 50%
-                APSb = 100 - APSa
+                #APSb = 100 - APSa
                 
                 survivala = float(results["fsurvival"])
                 survivalb = float(results["ssurvival"])
@@ -299,7 +304,7 @@ class UploadedResults(webapp.RequestHandler):
                 
                 game.AvgBattles = game.AvgBattles * 0.99 + 0.005 * (bots[0].Battles + bots[1].Battles)
                 
-                scorestime = time.time() - retrievetime - starttime
+                #scorestime = time.time() - retrievetime - starttime
                 
 
                 
@@ -318,18 +323,18 @@ class UploadedResults(webapp.RequestHandler):
                     key = b.key_name
                     sync[key] = sync.get(key,0) + 1
 
-                uploadsize = None
-                if game.Melee:
-                    uploadsize = game.MeleeSize -1
-                else:
-                    uploadsize = 30
+                #uploadsize = None
+                #if game.Melee:
+                #    uploadsize = game.MeleeSize -1
+                #else:
+                #    uploadsize = 30
                 minSize = min(60,len(scores)/2)
                 
                 botsDict = {}
                 for b in bots:
                     botdict[b.key_name] = b
                             
-                if len(sync.values()) > uploadsize:
+                if len(sync.values()) > minSize:
                     syncset = sync.keys()
                     
                     if game.Melee:
@@ -417,7 +422,7 @@ class UploadedResults(webapp.RequestHandler):
                 memcache.set_multi(botsDict)
 
             
-            puttime = time.time() - scorestime - retrievetime - starttime
+           # puttime = time.time() - scorestime - retrievetime - starttime
             
             if game.PriorityBattles and ((not game.Melee) or (game.Melee and random.random() < 0.0222)): # or min(bots, key = lambda b: b.Battles) < game.AvgBattles):
                 #do a gradient descent to the lowest battled pairings:
@@ -430,16 +435,16 @@ class UploadedResults(webapp.RequestHandler):
                 priopairs = None
                 
                 # this just does a gradient descent... let's do a direct search since we alread have the data
+                scoreVals = scores.values()
+                maxPairs = len(scoreVals) - 1
                 priobot2 = None                                
-                if bots[0].Pairings < bots[1].Pairings:
+                if bots[0].Pairings < maxPairs:
                     priobot = bots[0]
                     priopairs = pairingsarray[0]
-                elif bots[0].Pairings > bots[1].Pairings:
+                elif bots[1].Pairings < maxPairs:
                     priobot = bots[1]
                     priopairs = pairingsarray[1]
-                elif min([b.Pairings for b in scores.values()]) < len(scores) - 1:
-                    scoreVals = scores.values()
-                    maxPairs = len(scoreVals) - 1
+                elif min([b.Pairings for b in scores.values()]) < maxPairs:
                     possBots = filter(lambda b: b.Pairings < maxPairs,scoreVals)
                     priobot = random.choice(possBots)
                     priobot2 = random.choice(scoreVals).Name
@@ -493,7 +498,7 @@ class UploadedResults(webapp.RequestHandler):
                     self.response.out.write("\n[" + string.join(priobots,",") + "]")
             
             
-            priotime = time.time() - puttime - scorestime - retrievetime - starttime
+           # priotime = time.time() - puttime - scorestime - retrievetime - starttime
             
             self.response.out.write("\nOK. " + bota + " vs " + botb + " received")
             

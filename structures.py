@@ -17,7 +17,7 @@ total = "TOTAL"
 participants = "PARTICIPANTS"
 sync = "SYNCHRONIZE"
 
-#global_dict = {}
+global_dict = {}
 
 #class Pairing(db.Model):
 	##ABRU = db.StringProperty() --> key_name
