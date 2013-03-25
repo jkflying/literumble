@@ -1,5 +1,5 @@
 application: literumble
-version: 2-8
+version: 3-0
 runtime: python27
 threadsafe: yes
 api_version: 1
