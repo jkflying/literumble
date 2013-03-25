@@ -11,6 +11,9 @@ handlers:
 - url: /flags
   static_dir: flags
 
+- url: .FetchParseFlags
+  script: FetchParseFlags.application
+
 - url: .Rankings
   script: Rankings.application
   
