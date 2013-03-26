@@ -7,3 +7,7 @@ cron:
 - description: poll main page
   url: /
   schedule: every 5 minutes
+
+- description: update flag associations
+  url: /FetchParseFlags
+  schedule: every 2 hours
