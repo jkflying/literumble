@@ -39,3 +39,7 @@ td.green {
 td.red {
 	background-color: #f60;
 }
+img {
+    width: 30px;
+    height: 18px;
+}
