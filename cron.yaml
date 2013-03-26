@@ -1,13 +1,13 @@
 cron:
 - description: calculate batch rankings
   url: /BatchRankings 
-  schedule: every 12 hours synchronized
+  schedule: every 6 hours synchronized
   target: batchratings
 
 - description: poll main page
   url: /
-  schedule: every 5 minutes
+  schedule: every 1 minutes
 
 - description: update flag associations
   url: /FetchParseFlags
-  schedule: every 2 hours
+  schedule: every 2 hours synchronized
