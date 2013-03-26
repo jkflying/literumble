@@ -148,10 +148,10 @@ class Rumble(db.Model):
 default_flag_map = "FLAGMAP"
 allowed_flags = set(['ABW', 'AFG', 'AGO', 'AIA', 'ALA', 'ALB', 'AND', 'ARE', 
                      'ARG', 'ARM', 'ASM', 'ATA', 'ATF', 'ATG', 'AUS', 'AUT', 
-                     'AZE', 'BDI', 'ANK', 'BRA', 'CAN', 'CHE', 'CZE', 'DEU', 
+                     'AZE', 'BDI', 'ANK', 'BRA', 'CAN', 'CHE', 'CHN', 'CZE', 'DEU', 
                      'ESP', 'FIN', 'FRA', 'GBR', 'HUN', 'IRL', 'ITA', 'JPN', 
-                     'KOR', 'LTU', 'MAN', 'NLD', 'NOR', 'POL', 'PRT', 'RUS', 'SGP', 
-                     'SRB', 'SWE', 'THA', 'USA', 'VEN', 'WIKI', 'ZAF'])
+                     'KOR', 'LTU', 'MAN', 'NLD', 'NOR', 'NZL', 'POL', 'PRT', 'RUS', 'SGP', 
+                     'SRB', 'SWE', 'SVK','THA', 'USA', 'VEN', 'WIKI', 'ZAF'])
 
 class FlagMap(db.Model):
     #key_name is ALWAYS FLAGMAP
