@@ -175,8 +175,8 @@ class UploadedResults(webapp.RequestHandler):
                     #except:
                     #    pairingsarray[i] = pickle.loads(zlib.decompress(bots[i].PairingsList))
                         
-                    if isinstance(bots[i],structures.BotEntry):
-                        bots[i] = structures.CachedBotEntry(bots[i])
+#                    if isinstance(bots[i],structures.BotEntry):
+#                        bots[i] = structures.CachedBotEntry(bots[i])
                          
                     bots[i].Name = bots[i].Name.encode('ascii')
                     intern(bots[i].Name)
@@ -184,6 +184,7 @@ class UploadedResults(webapp.RequestHandler):
                     for p in pairingsarray[i]:
                         p.Name = p.Name.encode('ascii')
                         intern(p.Name)
+                    
                             
                     if not bots[i].Active or bots[i].Name not in scores: #game.ParticipantsScores:
                         #game.Participants.append(bd[i][0])
@@ -237,7 +238,7 @@ class UploadedResults(webapp.RequestHandler):
                 for b, pairings in zip(bots, pairingsarray):
                     i = 0
                     while i < len(pairings):
-                        if pairings[i].Name not in scores:
+                        if pairings[i].Name not in scores or pairings[i].Name == b.Name:
                             pairings.pop(i)
                     
                         i += 1
@@ -448,6 +449,8 @@ class UploadedResults(webapp.RequestHandler):
                     possBots = filter(lambda b: b.Pairings < maxPairs,scoreVals)
                     priobot = random.choice(possBots)
                     priobot2 = random.choice(scoreVals).Name
+                    while priobot2 == priobot.Name:
+                        priobot2 = random.choice(scoreVals).Name
                 elif bots[0].Battles <= bots[1].Battles:
                     priobot = bots[0]
                     priopairs = pairingsarray[0]
@@ -461,7 +464,7 @@ class UploadedResults(webapp.RequestHandler):
                 
                 
                 
-                if priobot2 is None:
+                if priobot2 is None and priopairs is not None:
                     if priobot.Pairings < len(scores) - 1:
                         #create the first battle of a new pairing
                         
@@ -478,7 +481,9 @@ class UploadedResults(webapp.RequestHandler):
                                 
                         if len(possPairs) > 0:
                             #choose a random new pairing to prevent overlap
+                            
                             priobot2 = random.choice(possPairs)
+
                                 
                                     
                     else:
