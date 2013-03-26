@@ -197,7 +197,7 @@ class Rankings(webapp.RequestHandler):
                         "\"pairings\"",
                         "\"battles\"",
                         "\"latest\""]
-            escapes = ["\"","","","","","","","","","\""]
+            escapes = ["\"","\"","","","","","","","","","\""]
             outs = ["[\n"]
             count = 0
             for bot in bots:
