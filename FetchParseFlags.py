@@ -47,7 +47,7 @@ class FetchParseFlags(webapp.RequestHandler):
             memcache.set(structures.default_flag_map,db_map.InternalMap)
             global_dict[structures.default_flag_map] = db_map.InternalMap
             
-            self.response.out.write(str(flag_map))
+            #self.response.out.write(str(flag_map))
 
             self.response.out.write("\nSuccess!")
 

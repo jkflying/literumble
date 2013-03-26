@@ -76,6 +76,23 @@ class Rankings(webapp.RequestHandler):
             else:
                 global_dict[game] = rumble
         
+        flagmap = global_dict.get(structures.default_flag_map)
+        if flagmap is None:
+            flagmap = memcache.get(structures.default_flag_map)
+            if flagmap is None:
+                flagmapholder = structures.FlagMap.get_by_key_name(structures.default_flag_map)
+                if flagmapholder is None:
+                    flagmap = zlib.compress(pickle.dumps({}))
+                else:
+                    flagmap = flagmapholder.InternalMap
+                    memcache.set(structures.default_flag_map,flagmap)
+                    global_dict[structures.default_flag_map] = flagmap
+            else:
+                global_dict[structures.default_flag_map] = flagmap
+                
+        flagmap = pickle.loads(zlib.decompress(flagmap))
+        
+        
         try:
         #print "try json"
             scoresdicts = json.loads(zlib.decompress(rumble.ParticipantsScores))
@@ -158,12 +175,19 @@ class Rankings(webapp.RequestHandler):
                 b.VoteScore = 0
             if b.ANPP is None:
                 b.ANPP = 0
+            package = string.split(b.Name,".")[0]
+            if package in flagmap:
+                b.Flag = flagmap[package]
+            else:
+                b.Flag = "NONE"
+            
         
         get_key = attrgetter(order)
         bots.sort( key=lambda b: get_key(b), reverse=reverseSort)
         
         if api:
             headings = ["\"name\"",
+                        "\"flag\"",
                         "\"rank\"",
                         "\"APS\"",
                         "\"PWIN\"",
@@ -182,8 +206,8 @@ class Rankings(webapp.RequestHandler):
                     break
                 
                 
-                cells = [bot.Name,
-                count,
+                cells = [
+                bot.Name,bot.Flag,count,
                 round(100.0*bot.APS)*0.01,
                 round(100.0*bot.PWIN)*0.01,
                 round(100.0*bot.ANPP)*0.01,
@@ -221,7 +245,7 @@ class Rankings(webapp.RequestHandler):
             out.append(structures.html_header % (game,gameTitle))
             out.append("\n<table>\n<tr>");
             
-            headings = ["","Competitor","APS","PWIN","ANPP","Vote","Survival","Pairings","Battles","Latest Battle"]
+            headings = ["","Flag","Competitor","APS","PWIN","ANPP","Vote","Survival","Pairings","Battles","Latest Battle"]
             for heading in headings:
                 sortedBy = order == heading
                 if order == heading and reverseSort:
@@ -258,7 +282,13 @@ class Rankings(webapp.RequestHandler):
                 bnh.append("</a>")
                 botNameHref = ''.join(bnh) #"<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
                 
-                cells = [str(rank),botNameHref,
+                ft = []
+                ft.append("<img src=\"/flags/")
+                ft.append(bot.Flag)
+                ft.append(".gif\">")
+                flagtag = ''.join(ft)
+                
+                cells = [rank,flagtag,botNameHref,
                     round(100.0*bot.APS)*0.01,
                     round(100.0*bot.PWIN)*0.01,
                     round(100.0*bot.ANPP)*0.01,

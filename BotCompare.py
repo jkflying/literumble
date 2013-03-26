@@ -116,6 +116,24 @@ class BotCompare(webapp.RequestHandler):
                 #return
             else:
                 
+                flagmap = global_dict.get(structures.default_flag_map)
+                if flagmap is None:
+                    flagmap = memcache.get(structures.default_flag_map)
+                    if flagmap is None:
+                        flagmapholder = structures.FlagMap.get_by_key_name(structures.default_flag_map)
+                        if flagmapholder is None:
+                            flagmap = zlib.compress(pickle.dumps({}))
+                        else:
+                            flagmap = flagmapholder.InternalMap
+                            memcache.set(structures.default_flag_map,flagmap)
+                            global_dict[structures.default_flag_map] = flagmap
+                    else:
+                        global_dict[structures.default_flag_map] = flagmap
+                        
+                flagmap = pickle.loads(zlib.decompress(flagmap))
+                
+                
+                
                 retrievetime = time.time() - parsetime - starttime
                 
                 botabots = None
@@ -144,7 +162,13 @@ class BotCompare(webapp.RequestHandler):
                     if ba.Name in botbbotsDict:
                         bb = botbbotsDict[ba.Name]
                         commonList.append(structures.ComparePair(ba,bb))
-                
+                        
+                for cp in commonList:
+                    package = string.split(cp.Name,".")[0]
+                    if package in flagmap:
+                        cp.Flag = flagmap[package]
+                    else:
+                        cp.Flag = "NONE"
                 
                 sortOrder = order.replace(" ","_").replace("(","").replace(")","")
                 if len(sortOrder) > 2 and sortOrder[-2] == "_":
@@ -158,6 +182,18 @@ class BotCompare(webapp.RequestHandler):
                 
                 out = []
                 
+                package = string.split(bota.Name,".")[0]
+                if package in flagmap:
+                    bota.Flag = flagmap[package]
+                else:
+                    bota.Flag = "NONE"
+                package = string.split(botb.Name,".")[0]
+                if package in flagmap:
+                    botb.Flag = flagmap[package]
+                else:
+                    botb.Flag = "NONE"
+
+
                 gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\">" + game + "</a>"
                 gameTitle = "Bot details of <b>" + botaName + " vs. " + botbName + "</b> in "+ gameHref + " vs. " + str(len(commonList)) + " bots."
                 out.append(structures.html_header % (game,gameTitle))
@@ -166,9 +202,21 @@ class BotCompare(webapp.RequestHandler):
                 
                 out.append("\n<th>Name</th>")
                 out.append("\n<td>")
+                #out.append("<img src=\"/flags/" + bota.Flag + ".gif\">")
                 out.append("<a href=\"BotDetails?game="+game+"&amp;name=" + botaName.replace(" ","%20")+extraArgs+"\">"+botaName+"</a>")
                 out.append("</td><td>")
+                #out.append("<img src=\"/flags/" + botb.Flag + ".gif\">")
                 out.append("<a href=\"BotDetails?game="+game+"&amp;name=" + botbName.replace(" ","%20")+extraArgs+"\">"+botbName+"</a>")
+                
+                out.append("</td></tr>")
+                
+                out.append("\n<tr><th>Flag</th>")
+                out.append("\n<td>")
+                out.append("<img src=\"/flags/" + bota.Flag + ".gif\">  " + bota.Flag)
+                #out.append("<a href=\"BotDetails?game="+game+"&amp;name=" + botaName.replace(" ","%20")+extraArgs+"\">"+botaName+"</a>")
+                out.append("</td><td>")
+                out.append("<img src=\"/flags/" + botb.Flag + ".gif\">  " + botb.Flag)
+                #out.append("<a href=\"BotDetails?game="+game+"&amp;name=" + botbName.replace(" ","%20")+extraArgs+"\">"+botbName+"</a>")
                 
                 out.append("</td></tr>")
                 
@@ -206,10 +254,11 @@ class BotCompare(webapp.RequestHandler):
                 out.append("\n<td>" + str(Winsa) + "</td><td>" + str(Winsb) + "</td></tr>")
                 out.append("\n</table>\n<br>\n<table>\n<tr>")
 
-                out.append("\n<td colspan=\"2\"></td><th colspan=\"2\">" + botaName + "</th><th colspan=\"2\">" + botbName + "</th><td colspan=\"2\"></td></tr><tr class=\"dim\">")
+                out.append("\n<td colspan=\"3\"></td><th colspan=\"2\">" + botaName + "</th><th colspan=\"2\">" + botbName + "</th><td colspan=\"2\"></td></tr><tr class=\"dim\">")
                 
                 headings = [
                 "  ",
+                "Flag",
                 "Name",
                 "APS (A)",
                 "Survival (A)",
@@ -234,25 +283,27 @@ class BotCompare(webapp.RequestHandler):
                         out.append("\n<th>" + orderHref + "</th>")
                 out.append("\n</tr>")
                 rank = 1
-                highlightKey = [False,False,True,True,True,True,True,True]
-                mins = [0,0,40,40,40,40,-0.1,-5]
-                maxs = [0,0,60,60,60,60,0.1,5]
+                highlightKey = [False,False,False,True,True,True,True,True,True]
+                mins = [0,0,0,40,40,40,40,-0.1,-5]
+                maxs = [0,0,0,60,60,60,60,0.1,5]
                 for cp in commonList:
                     if rank > lim:
                         break
 
                     botName=cp.Name
                     botNameHref = "<a href=\"BotDetails?game="+game+"&amp;name=" + botName.replace(" ","%20")+extraArgs+"\">"+botName+"</a>"
+                    flagtag = "<img src=\"/flags/" + cp.Flag + ".gif\">"
                     cells = [
-                    str(rank),
-                    botNameHref,
-                    round(100.0*cp.A_APS)*0.01,
-                    round(100.0*cp.A_Survival)*0.01,
-                    round(100.0*cp.B_APS)*0.01,
-                    round(100.0*cp.B_Survival)*0.01,
-                    round(100.0*cp.Diff_APS)*0.01,
-                    round(100.0*cp.Diff_Survival)*0.01
-                    ]
+                            str(rank),
+                            flagtag,
+                            botNameHref,
+                            round(100.0*cp.A_APS)*0.01,
+                            round(100.0*cp.A_Survival)*0.01,
+                            round(100.0*cp.B_APS)*0.01,
+                            round(100.0*cp.B_Survival)*0.01,
+                            round(100.0*cp.Diff_APS)*0.01,
+                            round(100.0*cp.Diff_Survival)*0.01
+                            ]
                         
                     out.append("\n<tr>")
 

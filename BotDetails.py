@@ -89,6 +89,23 @@ class BotDetails(webapp.RequestHandler):
         if bot is None:
             self.response.out.write( "ERROR. name/game combination does not exist: " + name + "/" + game)
         else:
+
+            flagmap = global_dict.get(structures.default_flag_map)
+            if flagmap is None:
+                flagmap = memcache.get(structures.default_flag_map)
+                if flagmap is None:
+                    flagmapholder = structures.FlagMap.get_by_key_name(structures.default_flag_map)
+                    if flagmapholder is None:
+                        flagmap = zlib.compress(pickle.dumps({}))
+                    else:
+                        flagmap = flagmapholder.InternalMap
+                        memcache.set(structures.default_flag_map,flagmap)
+                        global_dict[structures.default_flag_map] = flagmap
+                else:
+                    global_dict[structures.default_flag_map] = flagmap
+                    
+            flagmap = pickle.loads(zlib.decompress(flagmap))
+
             bots = None
             if lim > 0:
                 try:
@@ -104,7 +121,19 @@ class BotDetails(webapp.RequestHandler):
                         lastUpload = b.LastUpload
                     except:
                         b.LastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
+                    
+                    package = string.split(b.Name,".")[0]
+                    if package in flagmap:
+                        b.Flag = flagmap[package]
+                    else:
+                        b.Flag = "NONE"
+                        
+            package = string.split(bot.Name,".")[0]
+            if package in flagmap:
+                bot.Flag = flagmap[package]
+            else:
+                bot.Flag = "NONE"
+                
             retrievetime = time.time() - parsetime - starttime
             
             if(lim > 0):
@@ -114,6 +143,8 @@ class BotDetails(webapp.RequestHandler):
                 outs = ["{"]
                 outs.append("\n\"name\":\"")
                 outs.append(name)
+                outs.append("\",\n\"flag\":\"")
+                outs.append(bot.Flag)
                 outs.append("\",\n\"APS\":")
                 outs.append(str(bot.APS))
                 outs.append(",\n\"PWIN\":")
@@ -135,6 +166,7 @@ class BotDetails(webapp.RequestHandler):
                     outs.append(",\n\"pairingsList\":[\n")
                     headings = [
                     "\"name\"",
+                    "\"flag\"",
                     "\"rank\"",
                     "\"APS\"",
                     "\"NPP\"",
@@ -142,7 +174,7 @@ class BotDetails(webapp.RequestHandler):
                     "\"KNNPBI\"",
                     "\"battles\"",
                     "\"latest\""]
-                    escapes = ["\"","","","","","","","\""]
+                    escapes = ["\"","\"","","","","","","","\""]
                     count = 0
                     for b in bots:
                         count += 1
@@ -150,6 +182,7 @@ class BotDetails(webapp.RequestHandler):
                             break
                         
                         cells = [b.Name,
+                                 b.Flag,
                                  count,
                         round(100.0*b.APS)*0.01,
                         round(100.0*b.NPP)*0.01,
@@ -181,9 +214,12 @@ class BotDetails(webapp.RequestHandler):
                 gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\">" + game + "</a>"
                 gameTitle = "Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " + str(len(bots)) + " bots."
                 
+                flagtag = "<img src=\"/flags/" + bot.Flag + ".gif\">  " + bot.Flag
+                
                 out.append(structures.html_header % (game,gameTitle))
                 out.append("<table>\n")
                 out.append("<tr>\n<th>Name</th>\n<td>\n" + name + "</td></tr>")
+                out.append("<tr>\n<th>Flag</th>\n<td>\n" + flagtag + "</td></tr>")
                 out.append("<tr>\n<th>APS</th>\n<td>\n" + str(bot.APS) + "</td></tr>")
                 out.append("<tr>\n<th>PWIN</th>\n<td>\n" + str(50.0*float(bot.PL)/bot.Pairings + 50.0) + "</td></tr>")
                 out.append("<tr>\n<th>ANPP</th>\n<td>\n" + str(bot.ANPP) + "</td></tr>")
@@ -202,6 +238,7 @@ class BotDetails(webapp.RequestHandler):
                 
                 if lim > 0:
                     headings = ["  ",
+                    "Flag",
                     "Name",
                     "",
                     "APS",
@@ -226,26 +263,34 @@ class BotDetails(webapp.RequestHandler):
                         else:
                             out.append(  "\n<th>" + orderHref + "</th>")
                     out.append(  "\n</tr>")
-                    rank = 1
-                    highlightKey = [False,False,False,True,True,True,True,False,False]
-                    mins = [0,0,0,40,40,40,-0.1,0,0]
-                    maxs = [0,0,0,60,70,60,0.1,0,0]
+                    rank = 0
+                    highlightKey = [False,False,False,False,True,True,True,True,False,False]
+                    mins = [0,0,0,0,40,40,40,-0.1,0,0]
+                    maxs = [0,0,0,0,60,70,60,0.1,0,0]
                     for bot in bots:
+                        rank += 1
                         if rank > lim:
                             break
         
                         botName=bot.Name
                         botNameHref = "<a href=\"BotDetails?game="+game+"&amp;name=" + botName.replace(" ","%20")+extraArgs+"\">"+botName+" </a>"
                         compareHref = "<a href=\"BotCompare?game="+game+"&amp;bota=" + name.replace(" ","%20") + "&amp;botb=" + botName.replace(" ","%20") + extraArgs + "\" target=\"_blank\">compare</a>"
+                        ft = []
+                        ft.append("<img src=\"/flags/")
+                        ft.append(bot.Flag)
+                        ft.append(".gif\">")
+                        flagtag = ''.join(ft)
+                        
                         cells = [str(rank),
-                        botNameHref,
-                        compareHref,
-                        round(100.0*bot.APS)*0.01,
-                        round(100.0*bot.NPP)*0.01,
-                        round(100.0*bot.Survival)*0.01,
-                        round(100.0*bot.KNNPBI)*0.01,
-                        bot.Battles,
-                        bot.LastUpload]
+                                    flagtag,
+                                    botNameHref,
+                                    compareHref,
+                                    round(100.0*bot.APS)*0.01,
+                                    round(100.0*bot.NPP)*0.01,
+                                    round(100.0*bot.Survival)*0.01,
+                                    round(100.0*bot.KNNPBI)*0.01,
+                                    bot.Battles,
+                                    bot.LastUpload]
                         
                         out.append("\n<tr>")
                         for i,cell in enumerate(cells):
@@ -259,8 +304,6 @@ class BotDetails(webapp.RequestHandler):
                             else:
                                 out.append(  "\n<td>" + str(cell) + "</td>")
                         out.append( "\n</tr>")
-                        
-                        rank += 1
                         
                     out.append(  "</table>")
                 htmltime = time.time() - sorttime - retrievetime - parsetime - starttime 

@@ -10,6 +10,7 @@ handlers:
 
 - url: /flags
   static_dir: flags
+  expiration: "99d"
 
 - url: .FetchParseFlags
   script: FetchParseFlags.application
@@ -33,6 +34,7 @@ handlers:
 - url: /style.css
   static_files: style.css
   upload: style.css
+  expiration: "10d"
 
 - url: /
   script: RumbleSelect.application
