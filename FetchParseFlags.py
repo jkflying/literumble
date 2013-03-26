@@ -32,7 +32,7 @@ class FetchParseFlags(webapp.RequestHandler):
             endtag = "</pre>"
             startIndex = string.find(result.content,tag) + len(tag)
             endIndex = string.find(result.content,endtag,startIndex)
-            assoc = result.content[startIndex,endIndex]
+            assoc = result.content[startIndex:endIndex]
             lines = assoc.split("\n")
             flag_map = {}
             for line in lines:
@@ -49,7 +49,7 @@ class FetchParseFlags(webapp.RequestHandler):
             
             self.response.out.write(str(flag_map))
 
-            self.response.out.write("Success!")
+            self.response.out.write("\nSuccess!")
 
 
 application = webapp.WSGIApplication([
