@@ -36,7 +36,7 @@ class BatchRankings(webapp.RequestHandler):
            
     def get(self):
         #global global_dict
-        global_dict = {}
+        #global_dict = {}
         starttime = time.time()
 
         q = structures.Rumble.all()
@@ -62,9 +62,9 @@ class BatchRankings(webapp.RequestHandler):
                 for s,d in zip(scoreslist,scoresdicts):
                     s.__dict__.update(d)
                 scores = {s.Name:s for s in scoreslist}
-
-
             
+            r.ParticipantsScores = None
+            gc.collect()
 
             particHash = [p + "|" + r.Name for p in scores]
             
@@ -74,6 +74,8 @@ class BatchRankings(webapp.RequestHandler):
             for l in particSplit:
                 ppDict.update(memcache.get_multi(l))
             
+            particSplit.clear()
+            particSplit = None
             #ppDict = memcache.get_multi(particHash)
             #global_dict.update(ppDict)
             
@@ -95,7 +97,7 @@ class BatchRankings(webapp.RequestHandler):
             if len(missingHashes) > 0:
                 bmis = structures.BotEntry.get_by_key_name(missingHashes)
 
-                lost = False
+                #lost = False
                 lostList = []
                 for i in xrange(len(missingHashes)):
                     if bmis[i] is not None:
@@ -106,10 +108,17 @@ class BatchRankings(webapp.RequestHandler):
                     else:
                         bots[missingIndexes[i]] = None
                         lostList.append(missingHashes[i])
-                        lost = True
+                        #lost = True
+                        
                 if len(lostList) > 0:
                     for l in lostList:
                         scores.pop(l.split("|")[0],1)
+            particHash.clear()
+            missingHashes.clear()
+            missingIndexes.clear()
+            particHash = None
+            missingHashes = None
+            missingIndexes = None
                     
 
             bots = filter(lambda b: b is not None, bots)
@@ -118,8 +127,8 @@ class BatchRankings(webapp.RequestHandler):
    
             botIndexes = {}
             for i,b in enumerate(bots):
-                #b.Name = b.Name.encode('ascii')
-                #intern(b.Name)
+                b.Name = b.Name.encode('ascii')
+                intern(b.Name)
                 botIndexes[b.Name] = i
                 b.VoteScore = 0.0
                 b.__dict__["minScore"] = 100.0
@@ -136,7 +145,8 @@ class BatchRankings(webapp.RequestHandler):
                     pairings = [structures.ScoreSet() for _ in pairsDicts]
                     for s,d in zip(pairings,pairsDicts):
                         s.__dict__.update(d)                
-
+                
+                b.PairingsList = None
                 uzipPairs[b.Name] = pairings
                 dictPairs = {}
                 for p in pairings:
@@ -145,12 +155,16 @@ class BatchRankings(webapp.RequestHandler):
                 botsdict[b.Name] = b
                 
             gc.collect()
+            
             #Vote
             for b in bots:
                 pairings = uzipPairs[b.Name]    
                 minBot = min(pairings,key = lambda a: a.APS)
                 if minBot.Name in botIndexes:
                     bots[botIndexes[minBot.Name]].VoteScore += 1
+                    
+            botIndexes.clear()
+            botIndexes = None
             
             for b in bots:
                 if b.Pairings > 0:
@@ -176,7 +190,9 @@ class BatchRankings(webapp.RequestHandler):
                             count += 1
                     if count > 0:
                         p.KNNPBI = p.APS - avgAPS/count 
-            
+            uzipDictPairs.clear()
+            uzipDictPairs = None
+            gc.collect()
             # Avg Normalised Pairing Percentage
             for b in bots:
                 pairings = uzipPairs[b.Name]
@@ -213,8 +229,13 @@ class BatchRankings(webapp.RequestHandler):
                 b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),4)
                 b.__dict__.pop("minScore",1)
                 b.__dict__.pop("maxScore",1)
+                uzipPairs.pop(b.Name,1)
+                pairings = None
                 if b.Pairings > 0:
                     botsdict[b.key_name] = b
+            uzipPairs.clear()
+            uzipPairs = None
+            gc.collect()
             
             if len(botsdict) > 0:
                 splitlist = dict_split(botsdict,32)
@@ -222,10 +243,19 @@ class BatchRankings(webapp.RequestHandler):
                     memcache.set_multi(d)
                 #global_dict.update(botsdict)
             
-            scores = {b.Name: structures.LiteBot(b) for b in bots}
             
-            r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),7))
+            botsdict.clear()
+            botsdict = None
+            
+            scores = {b.Name: structures.LiteBot(b) for b in bots}
+            bots.clear()
+            bots = None
+            gc.collect()
+            
+            r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),3))
             #r.ParticipantsScores = zlib.compress(json.dumps([scores[s].__dict__ for s in scores]),4)
+            scores.clear()
+            scores = None
             
             r.BatchScoresAccurate = True
             memcache.set(r.Name,r)
