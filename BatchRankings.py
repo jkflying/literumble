@@ -19,6 +19,8 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from operator import attrgetter
 import structures
+from google.appengine.api import runtime
+import logging
 #from structures import global_dict
 
 
@@ -50,10 +52,10 @@ class BatchRankings(webapp.RequestHandler):
                 continue
 
             import gc
-               
-               
             gc.collect()            
-            gc.collect(2)                
+            gc.collect(2)               
+            
+            logging.info("mem usage at start of " + r.Name + ": " + str(runtime.memory_usage().current()) + "MB")
             try:
                 scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
             except:
@@ -74,7 +76,7 @@ class BatchRankings(webapp.RequestHandler):
             for l in particSplit:
                 ppDict.update(memcache.get_multi(l))
             
-            particSplit.clear()
+            
             particSplit = None
             #ppDict = memcache.get_multi(particHash)
             #global_dict.update(ppDict)
@@ -113,13 +115,13 @@ class BatchRankings(webapp.RequestHandler):
                 if len(lostList) > 0:
                     for l in lostList:
                         scores.pop(l.split("|")[0],1)
-            particHash.clear()
-            missingHashes.clear()
-            missingIndexes.clear()
+            #particHash.clear()
+            #missingHashes.clear()
+            #missingIndexes.clear()
             particHash = None
             missingHashes = None
             missingIndexes = None
-                    
+            logging.info("mem usage after loading bots: " + str(runtime.memory_usage().current()) + "MB")     
 
             bots = filter(lambda b: b is not None, bots)
             
@@ -153,8 +155,11 @@ class BatchRankings(webapp.RequestHandler):
                     dictPairs[p.Name] = p
                 uzipDictPairs[b.Name] = dictPairs
                 botsdict[b.Name] = b
-                
             gc.collect()
+            
+            logging.info("mem usage after unzipping pairings: " + str(runtime.memory_usage().current()) + "MB")     
+            #gc.collect()
+            #logging.info("mem usage after gc: " + str(runtime.memory_usage().current()) + "MB")     
             
             #Vote
             for b in bots:
@@ -169,7 +174,7 @@ class BatchRankings(webapp.RequestHandler):
             for b in bots:
                 if b.Pairings > 0:
                     b.VoteScore *= 100.0/b.Pairings
-                    
+            logging.info("mem usage after vote: " + str(runtime.memory_usage().current()) + "MB")     
             
             #KNN PBI
             bots.sort(key = lambda b: b.APS, reverse = True)
@@ -190,9 +195,12 @@ class BatchRankings(webapp.RequestHandler):
                             count += 1
                     if count > 0:
                         p.KNNPBI = p.APS - avgAPS/count 
+            
+            logging.info("mem usage after KNNPBI: " + str(runtime.memory_usage().current()) + "MB")     
             uzipDictPairs.clear()
             uzipDictPairs = None
             gc.collect()
+            logging.info("mem usage after gc: " + str(runtime.memory_usage().current()) + "MB")     
             # Avg Normalised Pairing Percentage
             for b in bots:
                 pairings = uzipPairs[b.Name]
@@ -219,7 +227,7 @@ class BatchRankings(webapp.RequestHandler):
                     b.ANPP = npps/count
                 else:
                     b.ANPP = 0
-                
+            logging.info("mem usage after ANPP: " + str(runtime.memory_usage().current()) + "MB")     
             # save to cache
             botsdict = {}
             for b in bots:
@@ -233,9 +241,13 @@ class BatchRankings(webapp.RequestHandler):
                 pairings = None
                 if b.Pairings > 0:
                     botsdict[b.key_name] = b
+                gc.collect()
+                
+            logging.info("mem usage after zipping: " + str(runtime.memory_usage().current()) + "MB")     
             uzipPairs.clear()
             uzipPairs = None
-            gc.collect()
+           # gc.collect()
+            #logging.info("mem usage after gc: " + str(runtime.memory_usage().current()) + "MB")     
             
             if len(botsdict) > 0:
                 splitlist = dict_split(botsdict,32)
@@ -248,20 +260,20 @@ class BatchRankings(webapp.RequestHandler):
             botsdict = None
             
             scores = {b.Name: structures.LiteBot(b) for b in bots}
-            bots.clear()
+            
             bots = None
             gc.collect()
             
             r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),3))
+            logging.info("mem usage after scores zipping: " + str(runtime.memory_usage().current()) + "MB")     
             #r.ParticipantsScores = zlib.compress(json.dumps([scores[s].__dict__ for s in scores]),4)
-            scores.clear()
             scores = None
             
             r.BatchScoresAccurate = True
             memcache.set(r.Name,r)
             r.put()
             gc.collect()
-   
+            logging.info("mem usage after write and gc: " + str(runtime.memory_usage().current()) + "MB")     
             
                 
             
