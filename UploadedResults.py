@@ -59,8 +59,8 @@ class UploadedResults(webapp.RequestHandler):
         if version in allowed_versions and client in allowed_clients:
             rumble = results["game"]
             
-            logging.debug("game: " + rumble)
-            logging.debug("user: " + user)
+            logging.debug("game: " + rumble + ", user: " + user)
+            #logging.debug("user: " + user)
             if rumble not in locks:
                 locks[rumble] = threading.Lock()
            #if "global" not in locks:
@@ -124,7 +124,7 @@ class UploadedResults(webapp.RequestHandler):
                 newBot = False
                 bota = results["fname"]
                 botb = results["sname"]
-                logging.debug("Bots : " + bota + " vs. " + botb)
+                #logging.debug("Bots : " + bota + " vs. " + botb)
                 
                 bd = [[bota, rumble], [botb, rumble]]
                 
@@ -151,7 +151,7 @@ class UploadedResults(webapp.RequestHandler):
                         modelbot = botFutures[i].get_result()
                         if modelbot is not None:
                             bots[i] = structures.CachedBotEntry(modelbot)
-                            logging.debug("retrieved from database")
+                            #logging.debug("retrieved from database")
                             
                 for i in [0,1]:
                     if bots[i] is None:
