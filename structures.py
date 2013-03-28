@@ -143,7 +143,7 @@ class Rumble(db.Model):
     AvgBattles = db.FloatProperty(indexed = False, default = 0.0)
     PriorityBattles = db.BooleanProperty(indexed = False, default = True)
     BatchScoresAccurate = db.BooleanProperty(default = False)
-    ParticipantsScores = db.BlobProperty(indexed = False)
+    ParticipantsScores = db.BlobProperty(default = db.Blob(zlib.compress(pickle.dumps({}))), indexed = False)
     Uploaders = db.BlobProperty(indexed = False, default = db.Blob(zlib.compress(pickle.dumps({}))))
     
 default_flag_map = "FLAGMAP"
