@@ -4,6 +4,10 @@ runtime: python27
 threadsafe: yes
 api_version: 1
 
+libraries:
+- name: numpy
+  version: "1.6.1"
+  
 handlers:
 - url: .UploadedResults
   script: UploadedResults.application
