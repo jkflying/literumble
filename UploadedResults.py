@@ -111,6 +111,8 @@ class UploadedResults(webapp.RequestHandler):
                 
                 try:
                     scores = pickle.loads(zlib.decompress(game.ParticipantsScores))
+                    if len(scores) == 0:
+                        scores = {}
                 except:
                     try:
                         scoresdicts = json.loads(zlib.decompress(game.ParticipantsScores))
@@ -118,6 +120,8 @@ class UploadedResults(webapp.RequestHandler):
                         for s,d in zip(scoreslist,scoresdicts):
                             s.__dict__.update(d)
                         scores = {s.Name:s for s in scoreslist}
+                        if len(scores) == 0:
+                            scores = {}
                     except:
                         scores = {}
                     
