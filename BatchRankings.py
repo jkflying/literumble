@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import cgi
-import datetime
+#import cgi
+#import datetime
 import wsgiref.handlers
 import time
 try:
@@ -14,7 +14,7 @@ import cPickle as pickle
 import math
 
 from google.appengine.ext import db
-from google.appengine.api import users
+#from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from operator import attrgetter
@@ -22,6 +22,7 @@ import structures
 from google.appengine.api import runtime
 import logging
 #from structures import global_dict
+import numpy
 
 
 def list_split(alist, split_size):
@@ -125,6 +126,9 @@ class BatchRankings(webapp.RequestHandler):
 
             bots = filter(lambda b: b is not None, bots)
             
+            get_key = attrgetter("APS")
+            bots.sort( key=lambda b: get_key(b), reverse=True)
+            
             gc.collect()   
    
             botIndexes = {}
@@ -132,13 +136,12 @@ class BatchRankings(webapp.RequestHandler):
                 b.Name = b.Name.encode('ascii')
                 intern(b.Name)
                 botIndexes[b.Name] = i
-                b.VoteScore = 0.0
-                b.__dict__["minScore"] = 100.0
-                b.__dict__["maxScore"] = 0.0
-                
-            uzipPairs = {}
-            uzipDictPairs = {}
-            for b in bots:    
+                b.VoteScore = 0
+            
+            botlen = len(bots)
+            APSs = numpy.zeros((botlen,botlen))  
+            
+            for i,b in enumerate(bots):    
                 try:
                     pairings = pickle.loads(zlib.decompress(b.PairingsList))
                 except:
@@ -148,13 +151,18 @@ class BatchRankings(webapp.RequestHandler):
                     for s,d in zip(pairings,pairsDicts):
                         s.__dict__.update(d)                
                 
-                b.PairingsList = None
-                uzipPairs[b.Name] = pairings
-                dictPairs = {}
                 for p in pairings:
-                    dictPairs[p.Name] = p
-                uzipDictPairs[b.Name] = dictPairs
-                botsdict[b.Name] = b
+                    j = botIndexes.get(p.Name,-1)
+                    if j == -1:
+                        APSs[j][i] = numpy.nan
+                    else:
+                        APSs[j][i] = p.APS
+                        
+            APSs += 100 - APSs.transpose()
+            APSs *= 0.5
+            
+            numpy.fill_diagonal(APSs, numpy.nan)
+            
             gc.collect()
             
             logging.info("mem usage after unzipping pairings: " + str(runtime.memory_usage().current()) + "MB")     
@@ -162,92 +170,88 @@ class BatchRankings(webapp.RequestHandler):
             #logging.info("mem usage after gc: " + str(runtime.memory_usage().current()) + "MB")     
             
             #Vote
-            for b in bots:
-                pairings = uzipPairs[b.Name]    
-                minBot = min(pairings,key = lambda a: a.APS)
-                if minBot.Name in botIndexes:
-                    bots[botIndexes[minBot.Name]].VoteScore += 1
-                    
-            botIndexes.clear()
-            botIndexes = None
-            
-            for b in bots:
-                if b.Pairings > 0:
-                    b.VoteScore *= 100.0/b.Pairings
-            logging.info("mem usage after vote: " + str(runtime.memory_usage().current()) + "MB")     
-            
+            minIndexes = numpy.nanargmin(APSs,0)
+            for minIndex in minIndexes:
+                bots[minIndex].VoteScore += 1
+
+            inv_len = 1.0/botlen
+            for i in set(minIndexes):
+                bots[i].VoteScore *= inv_len
+                
             #KNN PBI
-            bots.sort(key = lambda b: b.APS, reverse = True)
-            half_k = int(math.ceil(math.sqrt(len(bots))/2))
+            half_k = int(math.ceil(math.sqrt(botlen)/2))
+            KNN_PBI = -numpy.ones((botlen,botlen))
             for i,b in enumerate(bots):
-                b = botsdict[b.Name]
-                min_index = max(0,i-half_k)
-                max_index = min(len(bots) - 1, i + half_k)
-                knn = bots[min_index:max_index]
-                pairings = uzipPairs[b.Name]
-                for p in pairings:
-                    avgAPS = 0
-                    count = 0
-                    for compareBot in knn:
-                        pCompare = uzipDictPairs[compareBot.Name].get(p.Name,None)
-                        if pCompare is not None:
-                            avgAPS += pCompare.APS
-                            count += 1
-                    if count > 0:
-                        p.KNNPBI = p.APS - avgAPS/count 
+                low_bound = max([0,i-half_k])
+                high_bound = min([botlen-1,i+half_k])
+                before = APSs[:][low_bound:i]
+                after = APSs[:][(i+1):high_bound]
+                compare = numpy.hstack((before,after))
+                mm = numpy.mean(numpy.ma.masked_array(compare,numpy.isnan(compare)),axis=1)
+                
+                KNN_PBI[:][i] = APSs[:][i] - mm.filled(numpy.nan)
+            
+            KNN_PBI[KNN_PBI == numpy.nan] = -1
+
             
             logging.info("mem usage after KNNPBI: " + str(runtime.memory_usage().current()) + "MB")     
-            uzipDictPairs.clear()
-            uzipDictPairs = None
+           # uzipDictPairs = None
             gc.collect()
             logging.info("mem usage after gc: " + str(runtime.memory_usage().current()) + "MB")     
             # Avg Normalised Pairing Percentage
-            for b in bots:
-                pairings = uzipPairs[b.Name]
-                apsScores = [p.APS for p in pairings]
-                b.__dict__["minScore"] = 100 - max(apsScores)
-                b.__dict__["maxScore"] = 100 - min(apsScores)
             
-            for b in bots:
-                pairings = uzipPairs[b.Name]
-                npps = 0.0
-                count = 0
-                for p in pairings:
-                    other = botsdict.get(p.Name,None)
-                    if other is not None:
-                        minS = other.__dict__["minScore"]
-                        maxS = other.__dict__["maxScore"]
-                        if maxS > minS:
-                            p.NPP = 100*(p.APS - minS)/(maxS-minS)
-                        else:
-                            p.NPP = p.APS
-                        npps += p.NPP
-                        count += 1
-                if count > 0:
-                    b.ANPP = npps/count
-                else:
-                    b.ANPP = 0
-            logging.info("mem usage after ANPP: " + str(runtime.memory_usage().current()) + "MB")     
+            mins = numpy.nanmin(APSs,0)            
+            maxs = numpy.nanmax(APSs,0)
+            inv_ranges = 1.0/(maxs - mins)
+            NPPs = -numpy.ones((botlen,botlen))
+            for i,b in enumerate(bots):
+                NPPs[:][i] = 100*(APSs[:][i] - mins) * inv_ranges
+            
+            NPPs[NPPs == numpy.nan] = -1
+            
+            logging.info("mem usage after ANPP: " + str(runtime.memory_usage().current()) + "MB")   
+            
+            
+            
             # save to cache
             botsdict = {}
-            for b in bots:
-                pairings = uzipPairs[b.Name]
-                #b.PairingsList = zlib.compress(json.dumps([p.__dict__ for p in pairings]),4)
+            
+            for i,b in enumerate(bots):    
+                try:
+                    pairings = pickle.loads(zlib.decompress(b.PairingsList))
+                except:
+                    pairsDicts = json.loads(zlib.decompress(b.PairingsList))
+
+                    pairings = [structures.ScoreSet() for _ in pairsDicts]
+                    for s,d in zip(pairings,pairsDicts):
+                        s.__dict__.update(d)                
+                count = 0
+                totalNPP = 0.0
+                for p in pairings:
+                    j = botIndexes.get(p.Name,-1)
+                    if j == -1:
+                        p.KNNPBI = 0
+                        p.NPP = -1
+                    else:
+                        count += 1
+                        p.KNNPBI = KNN_PBI[j][i]
+                        p.NPP = NPPs[j][i]
+                        totalNPP += p.NPP
+                if count > 0:
+                    b.ANPP = totalNPP/count
+                else:
+                    b.ANPP = -1
+            
                 b.Pairings = len(pairings)
                 b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),4)
-                b.__dict__.pop("minScore",1)
-                b.__dict__.pop("maxScore",1)
-                uzipPairs.pop(b.Name,1)
-                pairings = None
+
                 if b.Pairings > 0:
                     botsdict[b.key_name] = b
-                gc.collect()
                 
             logging.info("mem usage after zipping: " + str(runtime.memory_usage().current()) + "MB")     
-            uzipPairs.clear()
-            uzipPairs = None
-           # gc.collect()
-            #logging.info("mem usage after gc: " + str(runtime.memory_usage().current()) + "MB")     
+
+            gc.collect()
+            logging.info("mem usage after gc: " + str(runtime.memory_usage().current()) + "MB")     
             
             if len(botsdict) > 0:
                 splitlist = dict_split(botsdict,32)
