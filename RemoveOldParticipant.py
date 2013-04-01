@@ -1,19 +1,19 @@
 #!/usr/bin/env python
-import cgi
-import datetime
+#import cgi
+#import datetime
 import wsgiref.handlers
-import time
-from time import strftime
+#import time
+#from time import strftime
 try:
     import json
 except:
     import simplejson as json
-import string
+#import string
 import cPickle as pickle
 import zlib
 
-from google.appengine.ext import db
-from google.appengine.api import users
+#from google.appengine.ext import db
+#from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
 

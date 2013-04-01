@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-import cgi
-import datetime
+#import cgi
+#import datetime
 import wsgiref.handlers
 import time
 try:
@@ -10,8 +10,8 @@ except:
 import string
 import cPickle as pickle
 
-from google.appengine.ext import db
-from google.appengine.api import users
+#from google.appengine.ext import db
+#from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from operator import attrgetter
@@ -62,7 +62,7 @@ class Rankings(webapp.RequestHandler):
             order = "VoteScore"
             
         parsing = time.time() - starttime
-        rumble = global_dict.get(game)
+        rumble = global_dict.get(game,None)
         if rumble is None:
             rumble = memcache.get(game)
             if rumble is None:
@@ -76,7 +76,7 @@ class Rankings(webapp.RequestHandler):
             else:
                 global_dict[game] = rumble
         
-        flagmap = global_dict.get(structures.default_flag_map)
+        flagmap = global_dict.get(structures.default_flag_map,None)
         if flagmap is None:
             flagmap = memcache.get(structures.default_flag_map)
             if flagmap is None:

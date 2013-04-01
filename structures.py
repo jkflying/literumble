@@ -23,18 +23,6 @@ sync = "SYNCHRONIZE"
 
 global_dict = {}
 
-#class Pairing(db.Model):
-    ##ABRU = db.StringProperty() --> key_name
-    #BotA = db.StringProperty()
-    #BotB = db.StringProperty()
-    #APS = db.FloatProperty(indexed = False)
-    #Survival = db.FloatProperty(indexed = False)
-    #Battles = db.IntegerProperty()
-    #Rumble = db.StringProperty()
-    #Uploader = db.StringProperty()
-    #LastUpload = db.DateTimeProperty()
-    #Active = db.BooleanProperty()
-
 class ComparePair:
     def __init__ (self, bota, botb):
         self.Name = bota.Name
@@ -89,19 +77,19 @@ class CachedBotEntry:
         
 class BotEntry(db.Model):
     def init_from_cache(self,bot):
-        self.key_name = bot.key_name
+#        self.key_name = bot.key_name
         self.Name = bot.Name
-        self.Battles = bot.Battles
-        self.Pairings = bot.Pairings
-        self.APS = bot.APS
-        self.Survival = bot.Survival
-        self.PL = bot.PL
-        self.VoteScore = bot.VoteScore
+        self.Battles = int(bot.Battles)
+        self.Pairings = int(bot.Pairings)
+        self.APS = float(bot.APS)
+        self.Survival = float(bot.Survival)
+        self.PL = int(bot.PL)
+        self.VoteScore = float(bot.VoteScore)
         self.Rumble = bot.Rumble
         self.LastUpload = bot.LastUpload
         self.Active = bot.Active
         self.PairingsList = bot.PairingsList
-        self.ANPP = bot.ANPP
+        self.ANPP = float(bot.ANPP)
         
     #NR = db.StringProperty() --> key_name
     Name = db.StringProperty(indexed = False)

@@ -66,6 +66,9 @@ class BatchRankings(webapp.RequestHandler):
                     s.__dict__.update(d)
                 scores = {s.Name:s for s in scoreslist}
             
+            if len(scores) == 0:
+                continue
+                    
             r.ParticipantsScores = None
             gc.collect()
 
@@ -99,6 +102,7 @@ class BatchRankings(webapp.RequestHandler):
 
                 #lost = False
                 lostList = []
+
                 for i in xrange(len(missingHashes)):
                     if bmis[i] is not None:
                         cb = structures.CachedBotEntry(bmis[i])
@@ -110,9 +114,11 @@ class BatchRankings(webapp.RequestHandler):
                         lostList.append(missingHashes[i])
                         #lost = True
                         
-                if len(lostList) > 0:
-                    for l in lostList:
-                        scores.pop(l.split("|")[0],1)
+                #if len(lostList) > 0:
+                 #   for l in lostList:
+                  #      scores.pop(l.split("|")[0],1)
+                #if len(lostList) > 2:
+                 #   continue
             
             particHash = None
             missingHashes = None
@@ -131,7 +137,7 @@ class BatchRankings(webapp.RequestHandler):
                 b.Name = b.Name.encode('ascii')
                 intern(b.Name)
                 botIndexes[b.Name] = i
-                b.VoteScore = 0
+                b.VoteScore = 0.
             
             botlen = len(bots)
             APSs = numpy.empty([botlen,botlen])  
@@ -197,7 +203,7 @@ class BatchRankings(webapp.RequestHandler):
             for i in range(botlen):
                 NPPs[:][i] = 100*(APSs[i][:] - mins[i]) * inv_ranges[i]
             
-            #NPPs[NPPs == numpy.nan] = -1
+            #NPPs[NPPs] = -1
             
             logging.info("mem usage after ANPP: " + str(runtime.memory_usage().current()) + "MB")   
             
@@ -217,6 +223,9 @@ class BatchRankings(webapp.RequestHandler):
                         s.__dict__.update(d)                
                 count = 0
                 totalNPP = 0.0
+                
+                apsCount = 0
+                totalAPS = 0.0
                 for p in pairings:
                     j = botIndexes.get(p.Name,-1)
                     if j == -1:
@@ -224,19 +233,24 @@ class BatchRankings(webapp.RequestHandler):
                         p.NPP = -1
                     else:
                         
-                        p.KNNPBI = KNN_PBI[j][i]
-                        p.NPP = NPPs[j][i]
+                        p.KNNPBI = float(KNN_PBI[j][i])
+                        p.NPP = float(NPPs[j][i])
                         if not numpy.isnan(APSs[j][i]):
-                            p.APS = APSs[j][i]
+                            p.APS = float(APSs[j][i])
+                            totalAPS += p.APS
+                            apsCount += 1
                         
                         if not numpy.isnan(p.NPP):
                             totalNPP += p.NPP
                             count += 1
                 
                 if count > 0:
-                    b.ANPP = totalNPP/count
+                    b.ANPP = float(totalNPP/count)
                 else:
-                    b.ANPP = -1
+                    b.ANPP = -1.0
+                if apsCount > 0:
+                    b.APS = float(totalAPS/apsCount)
+                    
             
 
                 b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),4)

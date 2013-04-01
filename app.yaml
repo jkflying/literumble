@@ -1,5 +1,5 @@
 application: literumble
-version: 3-0
+version: 3-4
 runtime: python27
 threadsafe: yes
 api_version: 1
@@ -34,6 +34,7 @@ handlers:
 - url: /favicon.ico
   static_files: favicon.ico
   upload: favicon.ico
+  expiration: "99d"
   
 - url: /style.css
   static_files: style.css

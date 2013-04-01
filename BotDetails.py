@@ -72,9 +72,9 @@ class BotDetails(webapp.RequestHandler):
         
         cached = True
         keyhash = name + "|" + game
-        bot = global_dict.get(keyhash,None)
-        if bot is None:
-            bot = memcache.get(keyhash)
+        #bot = global_dict.get(keyhash,None)
+        #if bot is None:
+        bot = memcache.get(keyhash)
 #            global_dict[keyhash] = bot
             
         if bot is None or bot.PairingsList is None:
