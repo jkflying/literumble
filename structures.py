@@ -45,7 +45,7 @@ class ScoreSet:
         self.NPP = -1
         
 class LiteBot:
-    def __init__ (self, bot = None):
+    def __init__ (self, bot = None, loadDict = None):
         if bot is not None:
             self.Name = bot.Name
             self.Battles = bot.Battles
@@ -59,6 +59,9 @@ class LiteBot:
             self.Active = bot.Active
             self.ANPP = bot.ANPP
         
+        if loadDict is not None:
+            self.__dict__.update(loadDict)
+            
 class CachedBotEntry:
     def __init__(self,bot):
         self.key_name = bot.key().name()

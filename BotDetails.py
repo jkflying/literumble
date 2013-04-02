@@ -106,20 +106,22 @@ class BotDetails(webapp.RequestHandler):
                     global_dict[structures.default_flag_map] = flagmap
                     
             try:
-                flagmap = marshal.loads(zlib.decompress(flagmap))
-            except:
                 flagmap = pickle.loads(zlib.decompress(flagmap))
+            except:
+                flagmap = marshal.loads(zlib.decompress(flagmap))
 
             bots = None
             if lim > 0:
                 try:
+                    bots = pickle.loads(zlib.decompress(bot.PairingsList))
+                except:
                     botsDicts = marshal.loads(zlib.decompress(bot.PairingsList))
                     bots = [structures.ScoreSet() for _ in botsDicts]
                     for s,d in zip(bots,botsDicts):
                         s.__dict__.update(d)
-                except:
-                    bots = pickle.loads(zlib.decompress(bot.PairingsList))
-                
+
+
+                removes = []
                 for b in bots:
                     lastUpload = None
                     try:
@@ -132,6 +134,15 @@ class BotDetails(webapp.RequestHandler):
                         b.Flag = flagmap[package]
                     else:
                         b.Flag = "NONE"
+                    try:
+                        b.APS = float(b.APS)
+                        b.KNNPBI = float(b.KNNPBI)
+                        b.NPP = float(b.NPP)
+                        b.Battles = int(b.Battles)
+                    except:
+                        removes.append(b)
+                for b in removes:
+                    bots.pop(bots.index(b))
                         
             package = string.split(bot.Name,".")[0]
             if package in flagmap:

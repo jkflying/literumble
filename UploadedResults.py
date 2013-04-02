@@ -129,16 +129,17 @@ class UploadedResults(webapp.RequestHandler):
                         bots[i] = structures.CachedBotEntry(bots[i])
                     
                     try:
+                        pairingsarray[i] = pickle.loads(zlib.decompress(bots[i].PairingsList))
+                        bots[i].PairingsList = None
+                    except:
                         pairsDicts = marshal.loads(zlib.decompress(bots[i].PairingsList))
 
                         pairingsarray[i] = [structures.ScoreSet() for _ in pairsDicts]
                         for s,d in zip(pairingsarray[i],pairsDicts):
                             s.__dict__.update(d)
                         bots[i].PairingsList = None
-                        
-                    except:
-                        pairingsarray[i] = pickle.loads(zlib.decompress(bots[i].PairingsList))
-                        bots[i].PairingsList = None
+
+
                     
                                              
                     #bots[i].Name = bots[i].Name.encode('ascii')
@@ -185,19 +186,21 @@ class UploadedResults(webapp.RequestHandler):
                 scores = None
                 
                 try:
-                    scoresdicts = marshal.loads(zlib.decompress(game.ParticipantsScores))
-                    scoreslist = [structures.LiteBot() for _ in scoresdicts]
-                    for s,d in zip(scoreslist,scoresdicts):
-                        s.__dict__.update(d)
-                    scores = {s.Name:s for s in scoreslist}
-                    if len(scores) == 0:
-                        scores = {}
-                except:    
-                    #logging.debug("uncompressed scores: " + str(len(s)) + "   compressed: " + str(a))
                     scores = pickle.loads(zlib.decompress(game.ParticipantsScores))
                     game.ParticipantsScores = None
                     if len(scores) == 0:
                         scores = {}
+                except:
+                    scoresdicts = marshal.loads(zlib.decompress(game.ParticipantsScores))
+                    scoreslist = [structures.LiteBot(loadDict = d) for d in scoresdicts]
+                    #for s,d in zip(scoreslist,scoresdicts):
+                    #    s.__dict__.update(d)
+                    scores = {s.Name:s for s in scoreslist}
+                    if len(scores) == 0:
+                        scores = {}
+                
+                    #logging.debug("uncompressed scores: " + str(len(s)) + "   compressed: " + str(a))
+
                         
                         
                 for i in [0,1]:
@@ -228,7 +231,24 @@ class UploadedResults(webapp.RequestHandler):
                 survivala = 100.0*survivala/game.Rounds
                 survivalb = 100.0*survivalb/game.Rounds
                 
+                for b, pairings in zip(bots, pairingsarray):
                     
+                    #b.PairingsList = zlib.compress(marshal.dumps([s.__dict__ for s in pairings]),1)
+                    
+                    if len(pairings) > 0:
+                        removes = []
+                        for p in pairings:
+                            try:
+                                p.APS = float(p.APS)
+                                p.Survival = float(p.Survival)
+                                p.Battles = int(p.Battles)
+                            except:
+                                removes.append(pairings.index(p))
+                                continue
+                            
+                        removes.sort(reverse=True)
+                        for i in removes:
+                            pairings.pop(i)
                 
                 apair = None
                 for p in pairingsarray[0]:
@@ -260,8 +280,10 @@ class UploadedResults(webapp.RequestHandler):
                 
                 #botaPairs = bots[0].Pairings
                 #botbPairs = bots[1].Pairings
-                
+                                
                 aBattles = apair.Battles
+                
+                
                 #bBattles = bpair.Battles
                 
                 inv_ab = 1.0/(aBattles + 1.0)    
@@ -287,22 +309,22 @@ class UploadedResults(webapp.RequestHandler):
                 
 
                 for b, pairings in zip(bots, pairingsarray):
-                    #b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),1)
-                    b.PairingsList = zlib.compress(marshal.dumps([s.__dict__ for s in pairings]),1)
-                    
                     aps = 0.0
                     survival = 0.0
                     pl = 0
                     battles = 0
                     if len(pairings) > 0:
+                        
                         for p in pairings:
-                            aps += p.APS
+                            aps += p.APS                            
                             survival += p.Survival
                             if p.APS > 50:
                                 pl += 1
                             else:
                                 pl -= 1
+                                
                             battles += p.Battles
+
                                 
                         aps /= len(pairings)
                         survival /= len(pairings)
@@ -310,7 +332,8 @@ class UploadedResults(webapp.RequestHandler):
                         b.Survival = survival
                         b.PL = pl
                         b.Battles = battles
-        
+                        
+                    b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),1)
                     b.LastUpload = apair.LastUpload
                 
                 game.TotalUploads += 1
@@ -336,7 +359,7 @@ class UploadedResults(webapp.RequestHandler):
                 for b in bots:
                     botsDict[b.key_name] = b
                             
-                if len(botsync) > minSize and not write_lock.locked():# and time.time() > last_write_time + 20:
+                if len(botsync) > minSize and not write_lock.locked() and time.time() > last_write_time + 20:
                     syncset = None
                     with sync_lock and write_lock:
                         last_write[syncname] = time.time()

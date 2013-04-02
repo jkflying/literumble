@@ -19,6 +19,8 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 from operator import attrgetter
 import structures
+import logging
+import numpy
 
 class BotCompare(webapp.RequestHandler):
     def get(self):
@@ -123,7 +125,7 @@ class BotCompare(webapp.RequestHandler):
                     if flagmap is None:
                         flagmapholder = structures.FlagMap.get_by_key_name(structures.default_flag_map)
                         if flagmapholder is None:
-                            flagmap = zlib.compress(marshal.dumps({}))
+                            flagmap = zlib.compress(pickle.dumps({}))
                         else:
                             flagmap = flagmapholder.InternalMap
                             memcache.set(structures.default_flag_map,flagmap)
@@ -132,9 +134,9 @@ class BotCompare(webapp.RequestHandler):
                         global_dict[structures.default_flag_map] = flagmap
                         
                 try:
-                    flagmap = marshal.loads(zlib.decompress(flagmap))
-                except:
                     flagmap = pickle.loads(zlib.decompress(flagmap))
+                except:
+                    flagmap = marshal.loads(zlib.decompress(flagmap))
                 
                 
                 
@@ -165,7 +167,15 @@ class BotCompare(webapp.RequestHandler):
                 for ba in botabots:
                     if ba.Name in botbbotsDict:
                         bb = botbbotsDict[ba.Name]
-                        commonList.append(structures.ComparePair(ba,bb))
+                        try:
+                            bb.APS = float(bb.APS)
+                            ba.APS = float(ba.APS)
+                            bb.Survival = float(bb.Survival)
+                            ba.Survival = float(ba.Survival)
+                        
+                            commonList.append(structures.ComparePair(ba,bb))
+                        except Exception, e:
+                            logging.info(str(e))
                         
                 for cp in commonList:
                     package = string.split(cp.Name,".")[0]

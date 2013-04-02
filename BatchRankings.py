@@ -279,9 +279,9 @@ class BatchRankings(webapp.RequestHandler):
             bots = None
             gc.collect()
             
-            #r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),3))
+            r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),3))
             #logging.info("mem usage after scores zipping: " + str(runtime.memory_usage().current()) + "MB")     
-            r.ParticipantsScores = zlib.compress(marshal.dumps([scores[s].__dict__ for s in scores]),4)
+            #r.ParticipantsScores = zlib.compress(marshal.dumps([scores[s].__dict__ for s in scores]),4)
             scores = None
             
             r.BatchScoresAccurate = True
