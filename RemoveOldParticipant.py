@@ -4,13 +4,14 @@
 import wsgiref.handlers
 #import time
 #from time import strftime
-try:
-    import json
-except:
-    import simplejson as json
+#try:
+#    import json
+#except:
+#    import simplejson as json
 #import string
 import cPickle as pickle
 import zlib
+import marshal
 
 #from google.appengine.ext import db
 #from google.appengine.api import users
@@ -88,7 +89,7 @@ def removeFromRumble(self,requests):
 	entry.Active = False
 	
 	try:
-		scoresdicts = json.loads(zlib.decompress(rumble.ParticipantsScores))
+		scoresdicts = marshal.loads(zlib.decompress(rumble.ParticipantsScores))
 		scoreslist = [structures.LiteBot() for _ in scoresdicts]
 		for s,d in zip(scoreslist,scoresdicts):
 			s.__dict__.update(d)
@@ -98,7 +99,7 @@ def removeFromRumble(self,requests):
 		
 	scores.pop(name,1)
 	#rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),4)
-	rumble.ParticipantsScores = zlib.compress(json.dumps([scores[s].__dict__ for s in scores]),4)
+	rumble.ParticipantsScores = zlib.compress(marshal.dumps([scores[s].__dict__ for s in scores]),4)
 	
 	
 	memcache.delete("home")

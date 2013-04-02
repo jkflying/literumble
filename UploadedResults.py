@@ -2,10 +2,10 @@
 #import cgi
 import datetime
 import wsgiref.handlers
-try:
-    import json
-except:
-    import simplejson as json
+#try:
+#    import json
+#except:
+#    import simplejson as json
 import string
 import cPickle as pickle
 #import pickle
@@ -23,6 +23,7 @@ import structures
 import logging
 from structures import global_dict
 import numpy
+import marshal
 
 global_sync = {}
 #sync_lock = threading.Lock()
@@ -124,18 +125,21 @@ class UploadedResults(webapp.RequestHandler):
                                 PairingsList = zlib.compress(pickle.dumps([]),1))
                         bots[i] = structures.CachedBotEntry(modelbot)
                         newBot = True
-                    #if isinstance(bots[i],structures.BotEntry):
-                     #   bots[i] = structures.CachedBotEntry(bots[i])
+                    if isinstance(bots[i],structures.BotEntry):
+                        bots[i] = structures.CachedBotEntry(bots[i])
                     
                     try:
-                        pairingsarray[i] = pickle.loads(zlib.decompress(bots[i].PairingsList))
-                        bots[i].PairingsList = None
-                    except:
-                        pairsDicts = json.loads(zlib.decompress(bots[i].PairingsList))
+                        pairsDicts = marshal.loads(zlib.decompress(bots[i].PairingsList))
 
                         pairingsarray[i] = [structures.ScoreSet() for _ in pairsDicts]
                         for s,d in zip(pairingsarray[i],pairsDicts):
                             s.__dict__.update(d)
+                        bots[i].PairingsList = None
+                        
+                    except:
+                        pairingsarray[i] = pickle.loads(zlib.decompress(bots[i].PairingsList))
+                        bots[i].PairingsList = None
+                    
                                              
                     #bots[i].Name = bots[i].Name.encode('ascii')
                     #intern(bots[i].Name)
@@ -179,22 +183,20 @@ class UploadedResults(webapp.RequestHandler):
                         
                         return
                 scores = None
+                
                 try:
+                    scoresdicts = marshal.loads(zlib.decompress(game.ParticipantsScores))
+                    scoreslist = [structures.LiteBot() for _ in scoresdicts]
+                    for s,d in zip(scoreslist,scoresdicts):
+                        s.__dict__.update(d)
+                    scores = {s.Name:s for s in scoreslist}
+                    if len(scores) == 0:
+                        scores = {}
+                except:    
                     #logging.debug("uncompressed scores: " + str(len(s)) + "   compressed: " + str(a))
                     scores = pickle.loads(zlib.decompress(game.ParticipantsScores))
                     game.ParticipantsScores = None
                     if len(scores) == 0:
-                        scores = {}
-                except:
-                    try:
-                        scoresdicts = json.loads(zlib.decompress(game.ParticipantsScores))
-                        scoreslist = [structures.LiteBot() for _ in scoresdicts]
-                        for s,d in zip(scoreslist,scoresdicts):
-                            s.__dict__.update(d)
-                        scores = {s.Name:s for s in scoreslist}
-                        if len(scores) == 0:
-                            scores = {}
-                    except:
                         scores = {}
                         
                         
@@ -285,7 +287,8 @@ class UploadedResults(webapp.RequestHandler):
                 
 
                 for b, pairings in zip(bots, pairingsarray):
-                    b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),1)
+                    #b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),1)
+                    b.PairingsList = zlib.compress(marshal.dumps([s.__dict__ for s in pairings]),1)
                     
                     aps = 0.0
                     survival = 0.0
@@ -333,7 +336,7 @@ class UploadedResults(webapp.RequestHandler):
                 for b in bots:
                     botsDict[b.key_name] = b
                             
-                if len(botsync) > minSize and not write_lock.locked() and time.time() > last_write_time + 20:
+                if len(botsync) > minSize and not write_lock.locked():# and time.time() > last_write_time + 20:
                     syncset = None
                     with sync_lock and write_lock:
                         last_write[syncname] = time.time()

@@ -3,14 +3,15 @@
 import datetime
 import wsgiref.handlers
 import time
-try:
-    import json
-except:
-    import simplejson as json
+#try:
+#    import json
+#except:
+#    import simplejson as json
 import string
 
 import zlib
 import cPickle as pickle
+import marshal
 
 #from google.appengine.ext import db
 #from google.appengine.api import users
@@ -104,17 +105,21 @@ class BotDetails(webapp.RequestHandler):
                 else:
                     global_dict[structures.default_flag_map] = flagmap
                     
-            flagmap = pickle.loads(zlib.decompress(flagmap))
+            try:
+                flagmap = marshal.loads(zlib.decompress(flagmap))
+            except:
+                flagmap = pickle.loads(zlib.decompress(flagmap))
 
             bots = None
             if lim > 0:
                 try:
-                    bots = pickle.loads(zlib.decompress(bot.PairingsList))
-                except:
-                    botsDicts = json.loads(zlib.decompress(bot.PairingsList))
+                    botsDicts = marshal.loads(zlib.decompress(bot.PairingsList))
                     bots = [structures.ScoreSet() for _ in botsDicts]
                     for s,d in zip(bots,botsDicts):
                         s.__dict__.update(d)
+                except:
+                    bots = pickle.loads(zlib.decompress(bot.PairingsList))
+                
                 for b in bots:
                     lastUpload = None
                     try:

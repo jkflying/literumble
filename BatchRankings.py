@@ -3,11 +3,12 @@
 #import datetime
 import wsgiref.handlers
 import time
-try:
-    import json
-except:
-    import simplejson as json
+#try:
+#    import json
+#except:
+#    import simplejson as json
 import string
+import marshal
 
 import zlib
 import cPickle as pickle
@@ -60,7 +61,7 @@ class BatchRankings(webapp.RequestHandler):
             try:
                 scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
             except:
-                scoresdicts = json.loads(zlib.decompress(r.ParticipantsScores))
+                scoresdicts = marshal.loads(zlib.decompress(r.ParticipantsScores))
                 scoreslist = [structures.LiteBot() for _ in scoresdicts]
                 for s,d in zip(scoreslist,scoresdicts):
                     s.__dict__.update(d)
@@ -147,7 +148,7 @@ class BatchRankings(webapp.RequestHandler):
                 try:
                     pairings = pickle.loads(zlib.decompress(b.PairingsList))
                 except:
-                    pairsDicts = json.loads(zlib.decompress(b.PairingsList))
+                    pairsDicts = marshal.loads(zlib.decompress(b.PairingsList))
 
                     pairings = [structures.ScoreSet() for _ in pairsDicts]
                     for s,d in zip(pairings,pairsDicts):
@@ -216,7 +217,7 @@ class BatchRankings(webapp.RequestHandler):
                 try:
                     pairings = pickle.loads(zlib.decompress(b.PairingsList))
                 except:
-                    pairsDicts = json.loads(zlib.decompress(b.PairingsList))
+                    pairsDicts = marshal.loads(zlib.decompress(b.PairingsList))
 
                     pairings = [structures.ScoreSet() for _ in pairsDicts]
                     for s,d in zip(pairings,pairsDicts):
@@ -278,9 +279,9 @@ class BatchRankings(webapp.RequestHandler):
             bots = None
             gc.collect()
             
-            r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),3))
+            #r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),3))
             #logging.info("mem usage after scores zipping: " + str(runtime.memory_usage().current()) + "MB")     
-            #r.ParticipantsScores = zlib.compress(json.dumps([scores[s].__dict__ for s in scores]),4)
+            r.ParticipantsScores = zlib.compress(marshal.dumps([scores[s].__dict__ for s in scores]),4)
             scores = None
             
             r.BatchScoresAccurate = True

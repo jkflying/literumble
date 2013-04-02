@@ -3,16 +3,17 @@
 #import datetime
 import wsgiref.handlers
 import time
-try:
-    import json
-except:
-    import simplejson as json
+#try:
+#    import json
+#except:
+#    import simplejson as json
+import marshal
 import string
 
 import zlib
 import cPickle as pickle
 
-from google.appengine.ext import db
+#from google.appengine.ext import db
 #from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
@@ -122,7 +123,7 @@ class BotCompare(webapp.RequestHandler):
                     if flagmap is None:
                         flagmapholder = structures.FlagMap.get_by_key_name(structures.default_flag_map)
                         if flagmapholder is None:
-                            flagmap = zlib.compress(pickle.dumps({}))
+                            flagmap = zlib.compress(marshal.dumps({}))
                         else:
                             flagmap = flagmapholder.InternalMap
                             memcache.set(structures.default_flag_map,flagmap)
@@ -130,7 +131,10 @@ class BotCompare(webapp.RequestHandler):
                     else:
                         global_dict[structures.default_flag_map] = flagmap
                         
-                flagmap = pickle.loads(zlib.decompress(flagmap))
+                try:
+                    flagmap = marshal.loads(zlib.decompress(flagmap))
+                except:
+                    flagmap = pickle.loads(zlib.decompress(flagmap))
                 
                 
                 
@@ -141,14 +145,14 @@ class BotCompare(webapp.RequestHandler):
                 try:
                     botabots = pickle.loads(zlib.decompress(bota.PairingsList))
                 except:
-                    botsDicts = json.loads(zlib.decompress(botb.PairingsList))
+                    botsDicts = marshal.loads(zlib.decompress(botb.PairingsList))
                     botabots = [structures.ScoreSet() for _ in botsDicts]
                     for s,d in zip(botabots,botsDicts):
                         s.__dict__.update(d)
                 try:
                     botbbots = pickle.loads(zlib.decompress(botb.PairingsList))
                 except:
-                    botsDicts = json.loads(zlib.decompress(botb.PairingsList))
+                    botsDicts = marshal.loads(zlib.decompress(botb.PairingsList))
                     botbbots = [structures.ScoreSet() for _ in botsDicts]
                     for s,d in zip(botbbots,botsDicts):
                         s.__dict__.update(d)

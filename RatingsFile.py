@@ -4,14 +4,14 @@
 import wsgiref.handlers
 #import time
 #from time import strftime
-try:
-    import json
-except:
-    import simplejson as json
+#try:
+#    import json
+#except:
+#    import simplejson as json
 import string
 import cPickle as pickle
 import zlib
-
+import marshal
 #from google.appengine.ext import db
 #from google.appengine.api import users
 from google.appengine.ext import webapp
@@ -59,20 +59,14 @@ class RatingsFile(webapp.RequestHandler):
                 global_dict[game] = rumble
         
         try:
-            botsdict = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
-            r = botsdict.values()
-
+            scoresdicts = marshal.loads(zlib.decompress(rumble.ParticipantsScores))
+            scoreslist = [structures.LiteBot() for _ in scoresdicts]
+            for s,d in zip(scoreslist,scoresdicts):
+                s.__dict__.update(d)
+            r = scoreslist
         except:
-            try:
-                scoresdicts = json.loads(zlib.decompress(rumble.ParticipantsScores))
-                scoreslist = [structures.LiteBot() for _ in scoresdicts]
-                for s,d in zip(scoreslist,scoresdicts):
-                    s.__dict__.update(d)
-                r = scoreslist #{s.Name:s for s in scoreslist}
-
-            except:
-                return
-                    
+            botsdict = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+            r = botsdict.values()     
                 
             
         out = []

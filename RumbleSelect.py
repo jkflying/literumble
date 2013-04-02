@@ -1,22 +1,22 @@
 #!/usr/bin/env python
-import cgi
-import datetime
+#import cgi
+#import datetime
 import wsgiref.handlers
 import time
-try:
-    import json
-except:
-    import simplejson as json
+#try:
+#    import json
+#except:
+#    import simplejson as json
 import string
-
+import marshal
 import zlib
 import pickle
 
-from google.appengine.ext import db
-from google.appengine.api import users
+#from google.appengine.ext import db
+#from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
-from operator import attrgetter
+#from operator import attrgetter
 import structures
 #from structures import global_dict
 class RumbleSelect(webapp.RequestHandler):
@@ -72,7 +72,7 @@ class RumbleSelect(webapp.RequestHandler):
             for cat,rumbs in zip(categories,rumbles):
                 for r in rumbs:
                     try:
-                        scoresdicts = json.loads(zlib.decompress(r.ParticipantsScores))
+                        scoresdicts = marshal.loads(zlib.decompress(r.ParticipantsScores))
                         entries = len(scoresdicts)
 #                   print entries
 #                   try:
