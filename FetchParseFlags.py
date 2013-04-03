@@ -10,8 +10,8 @@ import wsgiref.handlers
 import string
 
 import zlib
-#import pickle
-import marshal
+import cPickle as pickle
+#import marshal
 
 from google.appengine.ext import db
 #from google.appengine.api import users
@@ -43,8 +43,8 @@ class FetchParseFlags(webapp.RequestHandler):
                         flag_map[parts[0]] = parts[1]
             
             db_map = structures.FlagMap(key_name = structures.default_flag_map)
-            #db_map.InternalMap = db.Blob(zlib.compress(pickle.dumps(flag_map,pickle.HIGHEST_PROTOCOL)))
-            db_map.InternalMap = db.Blob(zlib.compress(marshal.dumps(flag_map),1))
+            db_map.InternalMap = db.Blob(zlib.compress(pickle.dumps(flag_map,pickle.HIGHEST_PROTOCOL)))
+            #db_map.InternalMap = db.Blob(zlib.compress(marshal.dumps(flag_map),1))
             db.put(db_map)
             memcache.set(structures.default_flag_map,db_map.InternalMap)
             global_dict[structures.default_flag_map] = db_map.InternalMap
