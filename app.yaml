@@ -16,8 +16,13 @@ handlers:
   static_dir: flags
   expiration: "99d"
 
+- url: /HandleQueuedResults
+  script: HandleQueuedResults.application
+  login: admin
+
 - url: .FetchParseFlags
   script: FetchParseFlags.application
+  login: admin
 
 - url: .Rankings
   script: Rankings.application
