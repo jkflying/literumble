@@ -139,6 +139,7 @@ class BotDetails(webapp.RequestHandler):
                         b.KNNPBI = float(b.KNNPBI)
                         b.NPP = float(b.NPP)
                         b.Battles = int(b.Battles)
+                        
                     except:
                         removes.append(b)
                 for b in removes:
@@ -149,10 +150,12 @@ class BotDetails(webapp.RequestHandler):
                 bot.Flag = flagmap[package]
             else:
                 bot.Flag = "NONE"
+            
                 
             retrievetime = time.time() - parsetime - starttime
             
             if(lim > 0):
+                bots = filter(lambda b: getattr(b,'Alive',True), bots)
                 bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)            
             
             if api:

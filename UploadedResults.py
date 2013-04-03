@@ -272,8 +272,14 @@ class UploadedResults(webapp.RequestHandler):
                 for b, pairings in zip(bots, pairingsarray):
                     i = 0
                     while i < len(pairings):
-                        if pairings[i].Name not in scores or pairings[i].Name == b.Name:
+                        if pairings[i].Name == b.Name:
                             pairings.pop(i)
+                            continue
+                        if not hasattr(pairings[i],"Alive"):
+                            pairings[i].Alive = True
+                        
+                        if pairings[i].Alive and pairings[i].Name not in scores:
+                            pairings[i].Alive = False
                     
                         i += 1
                     b.Pairings = i
@@ -316,14 +322,15 @@ class UploadedResults(webapp.RequestHandler):
                     if len(pairings) > 0:
                         
                         for p in pairings:
-                            aps += p.APS                            
-                            survival += p.Survival
-                            if p.APS > 50:
-                                pl += 1
-                            else:
-                                pl -= 1
-                                
-                            battles += p.Battles
+                            if p.Alive:
+                                aps += p.APS                            
+                                survival += p.Survival
+                                if p.APS > 50:
+                                    pl += 1
+                                else:
+                                    pl -= 1
+                                    
+                                battles += p.Battles
 
                                 
                         aps /= len(pairings)
@@ -359,49 +366,51 @@ class UploadedResults(webapp.RequestHandler):
                 for b in bots:
                     botsDict[b.key_name] = b
                             
-                if len(botsync) > minSize and not write_lock.locked() and time.time() > last_write_time + 20:
-                    syncset = None
-                    with sync_lock and write_lock:
-                        last_write[syncname] = time.time()
-                        syncset = botsync.keys()
-                        medianVal = numpy.median( botsync.values())
-                        if medianVal > 1:
-                            syncset = filter(lambda b: botsync[b] >= medianVal,syncset)
-
-                        syncbotsDict = memcache.get_multi(syncset)
-                        botsDict.update(syncbotsDict)
-                            
-                        syncbots = []
-                        for sb in syncset:
-                            b = botsDict.get(sb,None)
-                            
-                            if b is None or b.PairingsList is None:
-                                botsync.pop(sb,1)
-                                botsDict.pop(sb,1)
-                            else:
-                                syncbots.append(b)
-                                botsync.pop(sb,1)
-                                
-                
-                    try:
-                        thisput = []
-                        while len(syncbots) > 0:
-                            b = syncbots.pop(-1)
-                            putb = structures.BotEntry(key_name = b.key_name)
-                            putb.init_from_cache(b)
-                            thisput.append(putb)
-
-                        put_result = db.put_async(thisput)
+                if len(botsync) > minSize and not write_lock.locked():# and time.time() > last_write_time + 20:
+                    
+                    with write_lock:
+                        syncset = None
+                        with sync_lock:
+                            #last_write[syncname] = time.time()
+                            syncset = botsync.keys()
+                            #medianVal = numpy.median(botsync.values())
+                            #if medianVal > 1:
+                            #syncset = filter(lambda b: botsync[b] >= 2,syncset)
+                        if len(syncset) >= 10:
+                            syncbotsDict = memcache.get_multi(syncset)
+                            botsDict.update(syncbotsDict)
+                            with sync_lock:
+                                syncbots = []
+                                for sb in syncset:
+                                    b = botsDict.get(sb,None)
+                                    
+                                    if b is None or b.PairingsList is None:
+                                        botsync.pop(sb,1)
+                                        botsDict.pop(sb,1)
+                                    else:
+                                        syncbots.append(b)
+                                        botsync.pop(sb,1)
+                                        
                         
-                        logging.info("wrote " + str(len(thisput)) + " results to database")
-                        for b in thisput:
-                            s = b.key().name()
-                            botsync.pop(s,1)
-                            botsDict.pop(s,1)
-                            
-                    except Exception, e:
-                        logging.error('Failed to write data: '+ str(e))
-                        self.response.out.write('Failed to write data: '+ str(e.__class__))
+                            try:
+                                thisput = []
+                                while len(syncbots) > 0:
+                                    b = syncbots.pop(-1)
+                                    putb = structures.BotEntry(key_name = b.key_name)
+                                    putb.init_from_cache(b)
+                                    thisput.append(putb)
+        
+                                put_result = db.put_async(thisput)
+                                
+                                logging.info("wrote " + str(len(thisput)) + " results to database")
+                                for b in thisput:
+                                    s = b.key().name()
+                                    botsync.pop(s,1)
+                                    botsDict.pop(s,1)
+                                
+                            except Exception, e:
+                                logging.error('Failed to write data: '+ str(e))
+                                self.response.out.write('Failed to write data: '+ str(e.__class__))
                             
                 for b in bots:
                     if b.Name in scores:

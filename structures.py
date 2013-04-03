@@ -43,6 +43,7 @@ class ScoreSet:
         self.LastUpload = lastUpload
         self.KNNPBI = 0
         self.NPP = -1
+        self.Alive = True
         
 class LiteBot:
     def __init__ (self, bot = None, loadDict = None):

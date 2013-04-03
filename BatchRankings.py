@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #import cgi
-#import datetime
+import datetime
 import wsgiref.handlers
 import time
 #try:
@@ -42,6 +42,8 @@ class BatchRankings(webapp.RequestHandler):
         #global global_dict
         #global_dict = {}
         starttime = time.time()
+        cutoff_date = datetime.datetime.now() + datetime.timedelta(-30)
+        cutoff_date_string = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
 
         q = structures.Rumble.all()
         
@@ -114,12 +116,7 @@ class BatchRankings(webapp.RequestHandler):
                         bots[missingIndexes[i]] = None
                         lostList.append(missingHashes[i])
                         #lost = True
-                        
-                #if len(lostList) > 0:
-                 #   for l in lostList:
-                  #      scores.pop(l.split("|")[0],1)
-                #if len(lostList) > 2:
-                 #   continue
+
             
             particHash = None
             missingHashes = None
@@ -153,11 +150,21 @@ class BatchRankings(webapp.RequestHandler):
                     pairings = [structures.ScoreSet() for _ in pairsDicts]
                     for s,d in zip(pairings,pairsDicts):
                         s.__dict__.update(d)                
-                
-                for p in pairings:
+                removes = []
+                for q,p in enumerate(pairings):
                     j = botIndexes.get(p.Name,-1)
                     if not j == -1:
-                        APSs[j][i] = p.APS
+                        try:
+                            APSs[j][i] = p.APS
+                        except:
+                            removes.append(q)
+                removes.reverse()
+                for q in removes:
+                    p = pairings[q]
+                    if p.LastUpload < cutoff_date_string:
+                        pairings.pop(q)
+                    else:
+                        p.Alive = False
                 
                 b.Pairings = len(pairings)
                         
@@ -228,6 +235,9 @@ class BatchRankings(webapp.RequestHandler):
                 apsCount = 0
                 totalAPS = 0.0
                 for p in pairings:
+                    if not getattr(p,'Alive',True):
+                        continue
+                    
                     j = botIndexes.get(p.Name,-1)
                     if j == -1:
                         p.KNNPBI = 0

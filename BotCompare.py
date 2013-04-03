@@ -162,6 +162,10 @@ class BotCompare(webapp.RequestHandler):
                 #retrievetime = time.time() - parsetime - starttime
                 
                 #botabotsDict = {b.Name:b for b in botabots}
+                
+                botabots = filter(lambda b: getattr(b,'Alive',True),botabots)
+                botbbots = filter(lambda b: getattr(b,'Alive',True),botbbots)
+
                 botbbotsDict = {b.Name:b for b in botbbots}
                 commonList = []
                 for ba in botabots:
@@ -172,7 +176,7 @@ class BotCompare(webapp.RequestHandler):
                             ba.APS = float(ba.APS)
                             bb.Survival = float(bb.Survival)
                             ba.Survival = float(ba.Survival)
-                        
+                            
                             commonList.append(structures.ComparePair(ba,bb))
                         except Exception, e:
                             logging.info(str(e))
