@@ -246,12 +246,18 @@ class BatchRankings(webapp.RequestHandler):
                         
                         p.KNNPBI = float(KNN_PBI[j][i])
                         p.NPP = float(NPPs[j][i])
+
                         if not numpy.isnan(APSs[j][i]):
                             p.APS = float(APSs[j][i])
                             totalAPS += p.APS
                             apsCount += 1
+                            
+                        if numpy.isnan(p.KNNPBI):
+                            p.KNNPBI = 0
                         
-                        if not numpy.isnan(p.NPP):
+                        if numpy.isnan(p.NPP):
+                            p.NPP = -1
+                        else:
                             totalNPP += p.NPP
                             count += 1
                 
