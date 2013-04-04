@@ -68,16 +68,18 @@ class UploadedResults(webapp.RequestHandler):
                 try:
                     prio_string = rumble_queue.get_nowait()
                     self.response.out.write(prio_string)
-                    logging.info("Sent back priority battles: " + prio_string)
+                    #logging.info("Sent back priority battles: " + prio_string)
                 except Queue.Empty:
-                    logging.info("No available priority battles")
+                    #logging.info("No available priority battles")
                     prio_string = None
             except KeyError:
                 logging.info("No queue for rumble " + rumble + ", adding one!")
                 global_dict[rq_name] = Queue.Queue(maxsize=100)
             bota = results["fname"]
             botb = results["sname"]
-            self.response.out.write("OK. " + bota + " vs " + botb + " received")
+            bota_name = bota.split(" ")[0].split(".")[-1]
+            botb_name = botb.split(" ")[0].split(".")[-1]
+            self.response.out.write("OK. " + bota_name + " vs " + botb_name + " added to queue")
             
             elapsed = time.time() - starttime
             self.response.out.write(" in " + str(int(round(elapsed*1000))) + "ms")
@@ -85,7 +87,7 @@ class UploadedResults(webapp.RequestHandler):
         else:
             self.response.out.write("OK. CLIENT NOT SUPPORTED. Use one of: " + str(allowed_clients) + ", not " + client)
         
-        time.sleep(0.0)
+        #time.sleep(0.0)
 
 
 

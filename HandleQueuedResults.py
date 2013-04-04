@@ -374,7 +374,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                                 putb.init_from_cache(b)
                                 thisput.append(putb)
     
-                            put_result = db.put_async(thisput)
+                            db.put(thisput)
                             
                             logging.info("wrote " + str(len(thisput)) + " results to database")
                             for b in thisput:
@@ -501,9 +501,9 @@ class HandleQueuedResults(webapp.RequestHandler):
                     rumble_queue = global_dict[rq_name]
                     try:
                         rumble_queue.put_nowait(prio_string)
-                        logging.info("Added prio battles to queue: " + prio_string)
+                        #logging.info("Added prio battles to queue: " + prio_string)
                     except Queue.Full:
-                        logging.info("Queue for priority battles full")
+                        #logging.info("Queue for priority battles full")
                         prio_string = None
                 except KeyError:
                     logging.info("No queue for rumble " + rumble + ", adding one!")
