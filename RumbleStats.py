@@ -85,7 +85,7 @@ class RumbleStats(webapp.RequestHandler):
             #gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
             out = []
             out.append(structures.html_header % ("Statistics","LiteRumble Statistics"))
-            out.append("Stats generated: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC<br><br>\n")
+            out.append("\nStats generated: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC\n<br>\n<br>\n")
             q = structures.Rumble.all()
             
             rumbles = [[],[],[]]
@@ -124,7 +124,7 @@ class RumbleStats(webapp.RequestHandler):
                     
                 out.append(  "<table class=\"rumble\">\n<tr>")
                 
-                out.append(  "\n<b><th>" + cat + "</th>\n<th>Participants/Uploader</th>\n<th>Total Uploads</th>\n<th>Last Upload</th>\n</b></tr>")
+                out.append(  "<th>" + cat + "</th>\n<th>Participants</th>\n<th>Total Uploads</th>\n<th>Last Upload</th></tr>")
                 
                 for i,r in enumerate(rumbs):
                     game = r.Name
@@ -146,8 +146,11 @@ class RumbleStats(webapp.RequestHandler):
                     #out.append("\n<tr><td></td><td><i><u>Uploader Name</u></i></td><td></td><td></td></tr>")
                     uv = uploaders.values()
                     uv.sort(key = lambda u: u.latest, reverse=True)                    
-                    for u in uv:
-                        out.append("\n<tr><td></td><td>")
+                    for j,u in enumerate(uv):
+                        if j == 0:
+                            out.append("\n<tr><td><i>Uploader Name</i></td><td>")
+                        else:
+                            out.append("\n<tr><td></td><td>")
                         out.append(u.name)
                         out.append("</td><td>")
                         out.append(str(u.total))
@@ -159,7 +162,7 @@ class RumbleStats(webapp.RequestHandler):
                 for r in rumbs:
                     r.__dict__.pop("entries",1)
                     #r.__dict__.pop("scores",1)
-                out.append(  "</table>")
+                out.append(  "\n</table>")
             tqs = tqs_r.get_result()
             tasks = tqs.tasks
             last_min = tqs.executed_last_minute
@@ -170,11 +173,11 @@ class RumbleStats(webapp.RequestHandler):
             backlog = float(tasks)*60.0/last_min
             
             #out.append()
-            tq_string =  "<table><tr><th>Upload Queue Delay</th><th>" + formatSecs(backlog) + "</th></tr>"
-            tq_string += "<tr><th>Upload Queue Size</th><th>" + str(tasks) + " item"
+            tq_string =  "<table>\n<tr><th colspan=\"2\">Upload Queue</th></tr>\n<tr><td>Projected Processing Time</td><td>" + formatSecs(backlog) + "</td></tr>"
+            tq_string += "\n<tr><td>Current Size</td><td>" + str(tasks) + " pairing"
             if tasks != 1:
                 tq_string += "s"
-            tq_string += "</th><tr></table><br>"
+            tq_string += "</td></tr>\n</table>\n<br>"
             out.insert(2,tq_string)
             outstr = string.join(out,"")
             
