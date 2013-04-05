@@ -327,9 +327,11 @@ class HandleQueuedResults(webapp.RequestHandler):
             #self.response.out.write("<" + str(bots[0].Battles) + " " + str(bots[1].Battles) + ">")
             game.LastUpload = apair.LastUpload
             game.AvgBattles = game.AvgBattles * 0.99 + 0.005 * (bots[0].Battles + bots[1].Battles)
-            
-            uploaders = pickle.loads(zlib.decompress(game.Uploaders))
-            if len(uploaders) == 0:
+            if game.Uploaders is None:
+                uploaders = None
+            else:
+                uploaders = pickle.loads(zlib.decompress(game.Uploaders))
+            if uploaders is None or len(uploaders) == 0:
                 uploaders = {}
             uploaderName = results["user"]
             
