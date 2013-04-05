@@ -174,6 +174,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                     scores = {}
             except:
                 scoresdicts = marshal.loads(zlib.decompress(game.ParticipantsScores))
+                game.ParticipantsScores = None
                 scoreslist = [structures.LiteBot(loadDict = d) for d in scoresdicts]
                 #for s,d in zip(scoreslist,scoresdicts):
                 #    s.__dict__.update(d)
@@ -324,10 +325,22 @@ class HandleQueuedResults(webapp.RequestHandler):
             game.TotalUploads += 1
             
             #self.response.out.write("<" + str(bots[0].Battles) + " " + str(bots[1].Battles) + ">")
-            
+            game.LastUpload = apair.LastUpload
             game.AvgBattles = game.AvgBattles * 0.99 + 0.005 * (bots[0].Battles + bots[1].Battles)
-
             
+            uploaders = pickle.loads(zlib.decompress(game.Uploaders))
+            if len(uploaders) == 0:
+                uploaders = {}
+            uploaderName = results["user"]
+            
+            try:
+                uploader = uploaders[uploaderName]
+                uploader.latest = apair.LastUpload
+                uploader.total += 1
+            except KeyError:
+                uploader = structures.User(name=uploaderName)
+                uploaders[uploaderName] = uploader
+            game.Uploaders = zlib.compress(pickle.dumps(uploaders,-1),1)
 
             with sync_lock:
                 for b in bots:

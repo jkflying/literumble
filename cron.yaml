@@ -11,3 +11,7 @@ cron:
 - description: update flag associations
   url: /FetchParseFlags
   schedule: every 2 hours synchronized
+
+- description: refresh stats page
+  url: /RumbleStats?regen=1
+  schedule: every 1 hours synchronized
