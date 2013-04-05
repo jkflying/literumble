@@ -117,7 +117,7 @@ class BotEntry(db.Model):
 #    LastUpload = db.DateTimeProperty(indexed = False)
 #    TotalUploads = db.IntegerProperty(indexed = False)
 class User:
-    def __init__(self,name,total=0,latest=datetime.datetime.now()):
+    def __init__(self,name,total=1,latest=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
         self.name = name
         self.total = total
         self.latest = latest
@@ -133,6 +133,7 @@ class Rumble(db.Model):
     TotalUploads = db.IntegerProperty(indexed = False)
     Participants = db.StringListProperty(indexed = False) 
     AvgBattles = db.FloatProperty(indexed = False, default = 0.0)
+    LastUpload = db.StringProperty(indexed = False)
     PriorityBattles = db.BooleanProperty(indexed = False, default = True)
     BatchScoresAccurate = db.BooleanProperty(default = False)
     ParticipantsScores = db.BlobProperty(default = db.Blob(zlib.compress(pickle.dumps({}))), indexed = False)

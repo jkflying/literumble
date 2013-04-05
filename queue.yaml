@@ -1,8 +1,7 @@
 total_storage_limit: 5M
 
 queue:
-# Change the refresh rate of the default queue from 5/s to 3/s
 - name: default
-  rate: 6/s
+  rate: 20/s
   max_concurrent_requests: 1
   bucket_size: 3

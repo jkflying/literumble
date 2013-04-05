@@ -7,7 +7,11 @@ api_version: 1
 libraries:
 - name: numpy
   version: "1.6.1"
-  
+
+error_handlers:
+- error_code: over_quota
+  file: over_quota.txt
+
 handlers:
 - url: .UploadedResults
   script: UploadedResults.application
@@ -16,7 +20,7 @@ handlers:
   static_dir: flags
   expiration: "99d"
 
-- url: /HandleQueuedResults
+- url: .HandleQueuedResults
   script: HandleQueuedResults.application
   login: admin
 
@@ -48,6 +52,9 @@ handlers:
 
 - url: /
   script: RumbleSelect.application
+
+- url: .RumbleStats
+  script: RumbleStats.application
   
 - url: .BatchRankings
   script: BatchRankings.application

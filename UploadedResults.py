@@ -9,6 +9,7 @@ except:
 import string
 import cPickle as pickle
 #import pickle
+import apiproxy_errors
 from google.appengine.ext import db
 #from google.appengine.api import users
 from google.appengine.api import taskqueue
@@ -61,7 +62,18 @@ class UploadedResults(webapp.RequestHandler):
         version = results.get("version","ERROR")
         rumble = results.get("game",None)        
         if version in allowed_versions and client in allowed_clients and rumble is not None:
-            taskqueue.add(url='/HandleQueuedResults', payload=json.dumps(results))
+            
+            try:
+                taskqueue.add(url='/HandleQueuedResults', payload=json.dumps(results))
+            except apiproxy_errors.OverQuotaError:
+                bota = results["fname"]
+                botb = results["sname"]
+                bota_name = bota.split(" ")[0].split(".")[-1]
+                botb_name = botb.split(" ")[0].split(".")[-1]
+                self.response.out.write("OK. Queue full," + bota_name + " vs " + botb_name + " discarded.")
+                time.sleep(0.5)
+                return
+
             rq_name = rumble + "|queue"
             try:
                 rumble_queue = global_dict[rq_name]
