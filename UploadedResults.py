@@ -9,7 +9,7 @@ except:
 import string
 import cPickle as pickle
 #import pickle
-import apiproxy_errors
+from google.appengine.runtime import apiproxy_errors
 from google.appengine.ext import db
 #from google.appengine.api import users
 from google.appengine.api import taskqueue
@@ -71,7 +71,7 @@ class UploadedResults(webapp.RequestHandler):
                 bota_name = bota.split(" ")[0].split(".")[-1]
                 botb_name = botb.split(" ")[0].split(".")[-1]
                 self.response.out.write("OK. Queue full," + bota_name + " vs " + botb_name + " discarded.")
-                time.sleep(0.5)
+                #time.sleep(0.5)
                 return
 
             rq_name = rumble + "|queue"
