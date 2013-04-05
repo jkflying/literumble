@@ -85,7 +85,7 @@ class RumbleStats(webapp.RequestHandler):
             #gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
             out = []
             out.append(structures.html_header % ("Statistics","LiteRumble Statistics"))
-            out.append("Stats generated: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "<br><br>\n")
+            out.append("Stats generated: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC<br><br>\n")
             q = structures.Rumble.all()
             
             rumbles = [[],[],[]]

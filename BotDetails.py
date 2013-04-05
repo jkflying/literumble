@@ -293,7 +293,7 @@ class BotDetails(webapp.RequestHandler):
         
                         botName=bot.Name
                         botNameHref = "<a href=\"BotDetails?game="+game+"&amp;name=" + botName.replace(" ","%20")+extraArgs+"\">"+botName+" </a>"
-                        compareHref = "<a href=\"BotCompare?game="+game+"&amp;bota=" + name.replace(" ","%20") + "&amp;botb=" + botName.replace(" ","%20") + extraArgs + "\" target=\"_blank\">compare</a>"
+                        compareHref = "<a href=\"BotCompare?game="+game+"&amp;bota=" + name.replace(" ","%20") + "&amp;botb=" + botName.replace(" ","%20") + extraArgs + "\">compare</a>"
                         ft = []
                         ft.append("<img src=\"/flags/")
                         ft.append(bot.Flag)
