@@ -84,7 +84,7 @@ class RumbleStats(webapp.RequestHandler):
             tqs_r = tq.fetch_statistics_async()
             #gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
             out = []
-            out.append(structures.html_header % ("LiteRumble Stats","LiteRumble Stats"))
+            out.append(structures.html_header % ("Statistics","LiteRumble Statistics"))
             out.append("Stats generated: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "<br><br>\n")
             q = structures.Rumble.all()
             

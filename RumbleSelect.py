@@ -50,7 +50,7 @@ class RumbleSelect(webapp.RequestHandler):
             #gameHref = "<a href=Rankings?game=" + game + extraArgs + ">" + game + "</a>"
             out = []
             
-            out.append(structures.html_header % ("LiteRumble - Home","LiteRumble - Home"))
+            out.append(structures.html_header % ("Home","LiteRumble - Home"))
             
             q = structures.Rumble.all()
             
@@ -72,7 +72,7 @@ class RumbleSelect(webapp.RequestHandler):
             for cat,rumbs in zip(categories,rumbles):
                 for r in rumbs:
                     try:
-                        scoresdicts = marshal.loads(zlib.decompress(r.ParticipantsScores))
+                        scoresdicts = pickle.loads(zlib.decompress(r.ParticipantsScores))
                         entries = len(scoresdicts)
 #                   print entries
 #                   try:
@@ -97,9 +97,12 @@ class RumbleSelect(webapp.RequestHandler):
                         
                     out.append( "\n<tr>\n<td>" + gameHref + "</td>\n<td>" + topHref + "</td>\n<td>")
                     out.append(str(r.__dict__["entries"]) + "</td>\n</tr>")
+                    r.__dict__.pop("entries",1)
                     memcache.set(r.Name,r)
             
                 out.append(  "</table>")
+            
+            out.append("<table><td><b><a href=\"RumbleStats\">LiteRumble Statistics</a></b></td></table>")
             outstr = string.join(out,"")
             if not timing:
                 memcache.set("home",outstr)
