@@ -79,7 +79,7 @@ class RumbleSelect(webapp.RequestHandler):
 #                       print "fun!"
                     except:
                         try:
-                            scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
+                            scores = marshal.loads(zlib.decompress(r.ParticipantsScores))
                             entries = len(scores)
                         except:
                             entries = len(r.Participants)
