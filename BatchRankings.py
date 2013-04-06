@@ -42,7 +42,7 @@ class BatchRankings(webapp.RequestHandler):
         #global global_dict
         #global_dict = {}
         starttime = time.time()
-        cutoff_date = datetime.datetime.now() + datetime.timedelta(-30)
+        cutoff_date = datetime.datetime.now() + datetime.timedelta(-365)
         cutoff_date_string = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
 
         q = structures.Rumble.all()
@@ -153,11 +153,14 @@ class BatchRankings(webapp.RequestHandler):
                 removes = []
                 for q,p in enumerate(pairings):
                     j = botIndexes.get(p.Name,-1)
-                    if not j == -1:
+                    if j != -1:
                         try:
                             APSs[j][i] = p.APS
                         except:
                             removes.append(q)
+                    else:
+                        removes.append(q)
+                b.Pairings = len(pairings) - len(removes)
                 removes.reverse()
                 for q in removes:
                     p = pairings[q]
@@ -165,8 +168,9 @@ class BatchRankings(webapp.RequestHandler):
                         pairings.pop(q)
                     else:
                         p.Alive = False
+                if len(removes) > 0:
+                    b.PairingsList = zlib.compress(pickle.dumps(pairings,-1),1)
                 
-                b.Pairings = len(pairings)
                         
             APSs += 100 - APSs.transpose()
             APSs *= 0.5
