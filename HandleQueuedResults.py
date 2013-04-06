@@ -265,7 +265,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                         pairings[i].Alive = False
                 
                     i += 1
-                b.Pairings = i
+                #b.Pairings = i
             
                             
             aBattles = apair.Battles
@@ -298,6 +298,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                 survival = 0.0
                 pl = 0
                 battles = 0
+                alivePairings = 0
                 if len(pairings) > 0:
                     
                     for p in pairings:
@@ -310,10 +311,11 @@ class HandleQueuedResults(webapp.RequestHandler):
                                 pl -= 1
                                 
                             battles += p.Battles
+                            alivePairings += 1
 
                             
-                    aps /= len(pairings)
-                    survival /= len(pairings)
+                    aps /= alivePairings
+                    survival /= alivePairings
                     b.APS = aps
                     b.Survival = survival
                     b.PL = pl
@@ -321,6 +323,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                     
                 b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),1)
                 b.LastUpload = apair.LastUpload
+                b.Pairings = alivePairings
             
             game.TotalUploads += 1
             
