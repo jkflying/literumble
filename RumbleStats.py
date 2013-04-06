@@ -16,6 +16,7 @@ import pickle
 from google.appengine.api import taskqueue
 from google.appengine.ext import webapp
 from google.appengine.api import memcache
+import logging
 #from operator import attrgetter
 import structures
 from structures import global_dict
@@ -107,7 +108,14 @@ class RumbleStats(webapp.RequestHandler):
             
             for cat,rumbs in zip(categories,rumbles):
                 for r in rumbs:
-                    scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
+                    try:
+                        scores = pickle.loads(zlib.decompress(r.ParticipantsScores))
+                    except:
+                        logging.error("cannot load ParticipantsScores from " + r.Name)
+                        try:
+                            scores = marshal.loads(zlib.decompress(r.ParticipantsScores))
+                        except:
+                            scores = {}
                     entries = len(scores)
                     if r.LastUpload is None:
                         latest = None
@@ -147,10 +155,10 @@ class RumbleStats(webapp.RequestHandler):
                     uv = uploaders.values()
                     uv.sort(key = lambda u: u.latest, reverse=True)                    
                     for j,u in enumerate(uv):
-                        if j == 0:
-                            out.append("\n<tr><td><i>Uploader Name</i></td><td>")
-                        else:
-                            out.append("\n<tr><td></td><td>")
+#                        if j == 0:
+#                            out.append("\n<tr><td><i>Uploader Name</i></td><td>")
+#                        else:
+                        out.append("\n<tr><td></td><td>")
                         out.append(u.name)
                         out.append("</td><td>")
                         out.append(str(u.total))
