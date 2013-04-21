@@ -45,6 +45,17 @@ class BatchRankings(webapp.RequestHandler):
         cutoff_date = datetime.datetime.now() + datetime.timedelta(-365)
         cutoff_date_string = cutoff_date.strftime("%Y-%m-%d %H:%M:%S")
 
+        parts = self.request.query_string.split("&")
+        requests = {}
+        
+        if parts[0] != "":
+            for pair in parts:
+                ab = pair.split('=')
+                requests[ab[0]] = ab[1]
+        
+        force = bool(requests.get("force",False))
+        write = bool(requests.get("write",False))
+        
         q = structures.Rumble.all()
         
         for r in q.run():
@@ -52,7 +63,7 @@ class BatchRankings(webapp.RequestHandler):
             memr = memcache.get(r.Name)
             if memr is not None:
                 r = memr
-            if r.BatchScoresAccurate:
+            if r.BatchScoresAccurate and not force:
                 continue
 
 
@@ -140,7 +151,7 @@ class BatchRankings(webapp.RequestHandler):
             botlen = len(bots)
             APSs = numpy.empty([botlen,botlen])  
             APSs.fill(numpy.nan)
-            
+            totalAlivePairs = 0
             for i,b in enumerate(bots):    
                 try:
                     pairings = pickle.loads(zlib.decompress(b.PairingsList))
@@ -151,24 +162,29 @@ class BatchRankings(webapp.RequestHandler):
                     for s,d in zip(pairings,pairsDicts):
                         s.__dict__.update(d)                
                 removes = []
+                alivePairings = 0
                 for q,p in enumerate(pairings):
                     j = botIndexes.get(p.Name,-1)
                     if j != -1:
-                        try:
-                            APSs[j][i] = p.APS
-                        except:
-                            removes.append(q)
+                        APSs[j,i] = numpy.float(p.APS)
+                        p.Alive = True
+                        alivePairings += 1
                     else:
                         removes.append(q)
-                b.Pairings = len(pairings) - len(removes)
+                b.Pairings = alivePairings
+                totalAlivePairs += alivePairings
                 removes.reverse()
+                removed = False
                 for q in removes:
                     p = pairings[q]
                     if p.LastUpload < cutoff_date_string:
+                        removed = True
                         pairings.pop(q)
                     else:
+                        if p.Alive:
+                            removed = True
                         p.Alive = False
-                if len(removes) > 0:
+                if removed:
                     b.PairingsList = zlib.compress(pickle.dumps(pairings,-1),1)
                 
                         
@@ -178,7 +194,7 @@ class BatchRankings(webapp.RequestHandler):
             numpy.fill_diagonal(APSs, numpy.nan)
             
             gc.collect()
-            
+            logging.info(str(len(bots)) + " bots loaded, total of " + str(totalAlivePairs) + " alive pairings")
             logging.info("mem usage after unzipping pairings: " + str(runtime.memory_usage().current()) + "MB")        
             
             #Vote
@@ -193,14 +209,18 @@ class BatchRankings(webapp.RequestHandler):
             #KNN PBI
             half_k = int(math.ceil(math.sqrt(botlen)/2))
             KNN_PBI = -numpy.ones((botlen,botlen))
-            for i,b in enumerate(bots):
+            for i in xrange(len(bots)):
                 low_bound = max([0,i-half_k])
                 high_bound = min([botlen-1,i+half_k])
-                before = APSs[:][low_bound:i]
-                after = APSs[:][(i+1):high_bound]
-                compare = numpy.vstack((before,after))
-                mm = numpy.mean(numpy.ma.masked_array(compare,numpy.isnan(compare)),axis=0)
-                KNN_PBI[:][i] = APSs[:][i] - mm.filled(numpy.nan)
+                low_high_bound = min([i+1,high_bound])
+                before = APSs[:,low_bound:i]
+                after = APSs[:,low_high_bound:high_bound]
+                compare = numpy.hstack((before,after))
+                mm = numpy.mean(numpy.ma.masked_array(compare,numpy.isnan(compare)),axis=1)
+                KNN_PBI[:,i] = APSs[:,i] - mm.filled(numpy.nan)
+
+#                a[i] = 0
+ #               logging.info("mean error of transpose: " + str(numpy.mean(numpy.square(a))))
             
             #KNN_PBI[KNN_PBI == numpy.nan] = -1
 
@@ -213,7 +233,7 @@ class BatchRankings(webapp.RequestHandler):
             inv_ranges = 1.0/(maxs - mins)
             NPPs = -numpy.ones((botlen,botlen))
             for i in range(botlen):
-                NPPs[:][i] = 100*(APSs[i][:] - mins[i]) * inv_ranges[i]
+                NPPs[i,:] = 100*(APSs[i,:] - mins[i]) * inv_ranges[i]
             
             #NPPs[NPPs] = -1
             
@@ -233,26 +253,29 @@ class BatchRankings(webapp.RequestHandler):
                     pairings = [structures.ScoreSet() for _ in pairsDicts]
                     for s,d in zip(pairings,pairsDicts):
                         s.__dict__.update(d)                
-                count = 0
+                nppCount = 0
                 totalNPP = 0.0
                 
                 apsCount = 0
                 totalAPS = 0.0
+                
+                aliveCount = 0
                 for p in pairings:
-                    if not getattr(p,'Alive',True):
-                        continue
-                    
                     j = botIndexes.get(p.Name,-1)
-                    if j == -1:
+                    if j != -1:
+                        p.Alive = True #getattr(p,'Alive',True)
+                    else:
+                        p.Alive = False
                         p.KNNPBI = 0
                         p.NPP = -1
-                    else:
-                        
-                        p.KNNPBI = float(KNN_PBI[j][i])
-                        p.NPP = float(NPPs[j][i])
+                    
+                    if p.Alive:                    
+                        aliveCount += 1
+                        p.KNNPBI = float(KNN_PBI[j,i])
+                        p.NPP = float(NPPs[j,i])
 
-                        if not numpy.isnan(APSs[j][i]):
-                            p.APS = float(APSs[j][i])
+                        if not numpy.isnan(APSs[j,i]):
+                            p.APS = float(APSs[j,i])
                             totalAPS += p.APS
                             apsCount += 1
                             
@@ -263,19 +286,21 @@ class BatchRankings(webapp.RequestHandler):
                             p.NPP = -1
                         else:
                             totalNPP += p.NPP
-                            count += 1
+                            nppCount += 1
                 
-                if count > 0:
-                    b.ANPP = float(totalNPP/count)
+                if nppCount > 0:
+                    b.ANPP = float(totalNPP/nppCount)
                 else:
                     b.ANPP = -1.0
                 if apsCount > 0:
                     b.APS = float(totalAPS/apsCount)
+                else:
+                    b.APS = -1.0
                     
             
 
                 b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),4)
-
+                b.Pairings = aliveCount
                 if b.Pairings > 0:
                     botsdict[b.key_name] = b
                 
@@ -296,13 +321,21 @@ class BatchRankings(webapp.RequestHandler):
             
             scores = {b.Name: structures.LiteBot(b) for b in bots}
             
-            bots = None
+           # bots = None
             gc.collect()
             
             r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),3))
             #logging.info("mem usage after scores zipping: " + str(runtime.memory_usage().current()) + "MB")     
             #r.ParticipantsScores = zlib.compress(marshal.dumps([scores[s].__dict__ for s in scores]),4)
             scores = None
+            
+            if write:
+                writebots = [None]*len(bots)
+                for i,b in enumerate(bots):
+                    putb = structures.BotEntry(key_name = b.key_name)
+                    putb.init_from_cache(b)
+                    writebots[i] = putb
+                db.put(writebots)
             
             r.BatchScoresAccurate = True
             memcache.set(r.Name,r)
