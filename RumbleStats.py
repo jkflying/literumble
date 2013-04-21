@@ -159,7 +159,11 @@ class RumbleStats(webapp.RequestHandler):
 #                            out.append("\n<tr><td><i>Uploader Name</i></td><td>")
 #                        else:
                         out.append("\n<tr><td></td><td>")
-                        out.append(u.name)
+                        name = u.name
+                        if name == "Put_Your_Name_Here":
+                            name = "Anonymous"
+                        
+                        out.append(name)
                         out.append("</td><td>")
                         out.append(str(u.total))
                         out.append("</td><td>")
