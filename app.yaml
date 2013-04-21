@@ -8,6 +8,9 @@ libraries:
 - name: numpy
   version: "1.6.1"
 
+builtins:
+- remote_api: on
+
 error_handlers:
 - error_code: over_quota
   file: over_quota.txt
