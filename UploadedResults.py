@@ -35,7 +35,7 @@ global_sync = {}
 last_write = {}
 locks = {}
 
-allowed_clients = ["1.7.4.2", "1.8.1.0 Alpha 7", "1.8.1.0"]
+allowed_clients = ["1.8.1.0"]
 allowed_versions = ["1"]
 
 
@@ -73,6 +73,12 @@ class UploadedResults(webapp.RequestHandler):
                 self.response.out.write("OK. Queue full," + bota_name + " vs " + botb_name + " discarded.")
                 #time.sleep(0.5)
                 return
+            except taskqueue.Error:
+                bota = results["fname"]
+                botb = results["sname"]
+                bota_name = bota.split(" ")[0].split(".")[-1]
+                botb_name = botb.split(" ")[0].split(".")[-1]                
+                self.response.out.write("OK. Task queue error," + bota_name + " vs " + botb_name + " discarded.")
 
             rq_name = rumble + "|queue"
             try:
@@ -86,7 +92,7 @@ class UploadedResults(webapp.RequestHandler):
                     prio_string = None
             except KeyError:
                 logging.info("No queue for rumble " + rumble + ", adding one!")
-                global_dict[rq_name] = Queue.Queue(maxsize=100)
+                global_dict[rq_name] = Queue.Queue(maxsize=300)
             bota = results["fname"]
             botb = results["sname"]
             bota_name = bota.split(" ")[0].split(".")[-1]
