@@ -368,7 +368,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                         #medianVal = numpy.median(botsync.values())
                         #if medianVal > 1:
                         #syncset = filter(lambda b: botsync[b] >= 2,syncset)
-                    if len(syncset) >= 10:
+                    if len(syncset) >= min(10, len(scores)/2):
                         syncbotsDict = memcache.get_multi(syncset)
                         botsDict.update(syncbotsDict)
                         with sync_lock:
@@ -492,7 +492,6 @@ class HandleQueuedResults(webapp.RequestHandler):
                             
                     if len(possPairs) > 0:
                         #choose a random new pairing to prevent overlap
-                        
                         priobot2 = random.choice(possPairs)
 
                             
@@ -503,7 +502,6 @@ class HandleQueuedResults(webapp.RequestHandler):
                     minbat = min([p.Battles for p in priopairs])
                     possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name,priopairs)
                     if len( possPairs) > 0:
-                        
                         priobot2 = random.choice(possPairs).Name
                         #choose low battles, but still random - prevents lots of duplicates
                     
@@ -511,9 +509,10 @@ class HandleQueuedResults(webapp.RequestHandler):
             if priobot is not None and priobot2 is not None:    
                 priobots = [priobot.Name,priobot2]
                 priobots = [b.replace(' ','_') for b in priobots]
-                #self.response.out.write("\n[" + string.join(priobots,",") + "]")
+                
                 prio_string = "[" + string.join(priobots,",") + "]\n"
                 #prio_string = "\nOK. A priority battle got sent back!"
+                
                 rq_name = rumble + "|queue"
                 try:
                     rumble_queue = global_dict[rq_name]
@@ -525,7 +524,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                         prio_string = None
                 except KeyError:
                     logging.info("No queue for rumble " + rumble + ", adding one!")
-                    global_dict[rq_name] = Queue.Queue(maxsize=100)
+                    global_dict[rq_name] = Queue.Queue(maxsize=300)
         
         
        # priotime = time.time() - puttime - scorestime - retrievetime - starttime
