@@ -20,7 +20,10 @@ from google.appengine.api import memcache
 from operator import attrgetter
 import structures
 from structures import global_dict
-
+from PIL import Image
+import base64
+import cStringIO
+import numpy
 class BotDetails(webapp.RequestHandler):
     def get(self):
 #        global_dict = {}
@@ -86,6 +89,21 @@ class BotDetails(webapp.RequestHandler):
                 memcache.set(keyhash,bot)
 #                global_dict[keyhash] = bot
                 cached = False
+
+        rumble = global_dict.get(game,None)
+        if rumble is None:
+            rumble = memcache.get(game)
+            if rumble is None:
+                rumble = structures.Rumble.get_by_key_name(game)
+                if rumble is None:
+                    self.response.out.write("RUMBLE NOT FOUND")
+                    return
+                else:
+                    global_dict[game]=rumble
+                    memcache.set(game,rumble)
+            else:
+                global_dict[game] = rumble
+                
                 
         if bot is None:
             self.response.out.write( "ERROR. name/game combination does not exist: " + name + "/" + game)
@@ -233,12 +251,35 @@ class BotDetails(webapp.RequestHandler):
                 gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\">" + game + "</a>"
                 gameTitle = "Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " + str(len(bots)) + " bots."
                 
-                flagtag = "<img src=\"/flags/" + bot.Flag + ".gif\">  " + bot.Flag
+                flagtag = "<img id='flag' src=\"/flags/" + bot.Flag + ".gif\">  " + bot.Flag
                 
                 out.append(structures.html_header % (game,gameTitle))
                 out.append("<table>\n")
-                out.append("<tr>\n<th>Name</th>\n<td>\n" + name + "</td></tr>")
-                out.append("<tr>\n<th>Flag</th>\n<td>\n" + flagtag + "</td></tr>")
+                out.append("<tr>\n<th>Name</th>\n<td>\n" + name + "</td>\n<th>Score Distribution</th></tr>")
+                out.append("<tr>\n<th>Flag</th>\n<td>\n" + flagtag + "</td><td rowspan=\"9\">")
+                
+                enemyScores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+                
+                a = numpy.zeros([101,101],)
+                for b in bots:
+                    eScore = enemyScores.get(b.Name,None)
+                    if eScore:
+                        myScore = int(round(b.APS))
+                        theirAvg = int(round(eScore.APS))
+                        a[100-myScore,theirAvg]+=numpy.float(1.0)
+                a = numpy.log(1+a)
+                a *= 255/(numpy.max(a))
+                b = Image.fromarray(255 - a)
+                c = cStringIO.StringIO()
+                b.convert("RGB").save(c,format="png")
+                d = c.getvalue()
+                e = base64.b64encode(d).decode("ascii")
+                out.append('<img id="distribution" alt="score distibution" src="data:image/png;base64,')
+                out.append(e)
+                out.append("\">")#<br>Opponent APS vs. Pairing APS")
+                                
+                
+                out.append("</td></tr>")
                 out.append("<tr>\n<th>APS</th>\n<td>\n" + str(bot.APS) + "</td></tr>")
                 out.append("<tr>\n<th>PWIN</th>\n<td>\n" + str(50.0*float(bot.PL)/bot.Pairings + 50.0) + "</td></tr>")
                 out.append("<tr>\n<th>ANPP</th>\n<td>\n" + str(bot.ANPP) + "</td></tr>")
@@ -253,7 +294,12 @@ class BotDetails(webapp.RequestHandler):
                 out.append("<input type=\"hidden\" name=\"bota\" value=\"" + name + "\" />")
                 out.append("<input type=\"text\" name=\"botb\" value=\"" + name + "\" />")
                 out.append("<input type=\"submit\" value=\"Compare\" /></form>")
-                out.append("</td></tr></table>\n<table>\n<tr>\n")
+                out.append("</td><td>Opponent APS vs. Pairing APS</td></tr></table></div>")
+                
+                
+                
+                
+                out.append("\n<table>\n<tr>\n")
                 
                 if lim > 0:
                     headings = ["  ",
@@ -295,7 +341,7 @@ class BotDetails(webapp.RequestHandler):
                         botNameHref = "<a href=\"BotDetails?game="+game+"&amp;name=" + botName.replace(" ","%20")+extraArgs+"\">"+botName+" </a>"
                         compareHref = "<a href=\"BotCompare?game="+game+"&amp;bota=" + name.replace(" ","%20") + "&amp;botb=" + botName.replace(" ","%20") + extraArgs + "\">compare</a>"
                         ft = []
-                        ft.append("<img src=\"/flags/")
+                        ft.append("<img id='flag' src=\"/flags/")
                         ft.append(bot.Flag)
                         ft.append(".gif\">")
                         flagtag = ''.join(ft)
@@ -333,6 +379,8 @@ class BotDetails(webapp.RequestHandler):
                     out.append("\n<br /> retrieve: " + str(int(round(retrievetime*1000))) )
                     out.append("\n<br /> sort: " + str(int(round(sorttime*1000))) )
                     out.append("\n<br /> html generation: " + str(int(round(htmltime*1000))) )
+
+
                 out.append(  "</body></html>")
                 
                 outstr = string.join(out,"")
