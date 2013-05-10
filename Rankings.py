@@ -233,7 +233,7 @@ class Rankings(webapp.RequestHandler):
                 botNameHref = ''.join(bnh) #"<a href=BotDetails?game="+game+"&name=" + botName.replace(" ","%20")+extraArgs+">"+botName+"</a>"
                 
                 ft = []
-                ft.append("<img src=\"/flags/")
+                ft.append("<img id='flag' src=\"/flags/")
                 ft.append(bot.Flag)
                 ft.append(".gif\">")
                 flagtag = ''.join(ft)

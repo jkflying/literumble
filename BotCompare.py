@@ -230,10 +230,10 @@ class BotCompare(webapp.RequestHandler):
                 
                 out.append("\n<tr><th>Flag</th>")
                 out.append("\n<td>")
-                out.append("<img src=\"/flags/" + bota.Flag + ".gif\">  " + bota.Flag)
+                out.append("<img id='flag' src=\"/flags/" + bota.Flag + ".gif\">  " + bota.Flag)
                 #out.append("<a href=\"BotDetails?game="+game+"&amp;name=" + botaName.replace(" ","%20")+extraArgs+"\">"+botaName+"</a>")
                 out.append("</td><td>")
-                out.append("<img src=\"/flags/" + botb.Flag + ".gif\">  " + botb.Flag)
+                out.append("<img id='flag' src=\"/flags/" + botb.Flag + ".gif\">  " + botb.Flag)
                 #out.append("<a href=\"BotDetails?game="+game+"&amp;name=" + botbName.replace(" ","%20")+extraArgs+"\">"+botbName+"</a>")
                 
                 out.append("</td></tr>")
@@ -310,7 +310,7 @@ class BotCompare(webapp.RequestHandler):
 
                     botName=cp.Name
                     botNameHref = "<a href=\"BotDetails?game="+game+"&amp;name=" + botName.replace(" ","%20")+extraArgs+"\">"+botName+"</a>"
-                    flagtag = "<img src=\"/flags/" + cp.Flag + ".gif\">"
+                    flagtag = "<img id='flag' src=\"/flags/" + cp.Flag + ".gif\">"
                     cells = [
                             str(rank),
                             flagtag,
