@@ -6,7 +6,10 @@ api_version: 1
 
 libraries:
 - name: numpy
-  version: "1.6.1"
+  version: "latest"
+
+- name: PIL
+  version: "latest"
 
 builtins:
 - remote_api: on
