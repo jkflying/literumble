@@ -21,6 +21,9 @@ from operator import attrgetter
 import structures
 import logging
 import numpy
+from PIL import Image
+import base64
+import cStringIO
 
 class BotCompare(webapp.RequestHandler):
     def get(self):
@@ -118,6 +121,21 @@ class BotCompare(webapp.RequestHandler):
                 self.response.out.write("ERROR. name/game combination does not exist: " + botbName + "/" + game)
                 #return
             else:
+                
+                
+                rumble = global_dict.get(game,None)
+                if rumble is None:
+                    rumble = memcache.get(game)
+                    if rumble is None:
+                        rumble = structures.Rumble.get_by_key_name(game)
+                        if rumble is None:
+                            self.response.out.write("RUMBLE NOT FOUND")
+                            return
+                        else:
+                            global_dict[game]=rumble
+                            memcache.set(game,rumble)
+                    else:
+                        global_dict[game] = rumble
                 
                 flagmap = global_dict.get(structures.default_flag_map)
                 if flagmap is None:
@@ -226,7 +244,7 @@ class BotCompare(webapp.RequestHandler):
                 #out.append("<img src=\"/flags/" + botb.Flag + ".gif\">")
                 out.append("<a href=\"BotDetails?game="+game+"&amp;name=" + botbName.replace(" ","%20")+extraArgs+"\">"+botbName+"</a>")
                 
-                out.append("</td></tr>")
+                out.append("</td><th>Diff Distribution</th></tr>")
                 
                 out.append("\n<tr><th>Flag</th>")
                 out.append("\n<td>")
@@ -236,6 +254,38 @@ class BotCompare(webapp.RequestHandler):
                 out.append("<img id='flag' src=\"/flags/" + botb.Flag + ".gif\">  " + botb.Flag)
                 #out.append("<a href=\"BotDetails?game="+game+"&amp;name=" + botbName.replace(" ","%20")+extraArgs+"\">"+botbName+"</a>")
                 
+                out.append("</td><td rowspan=\"7\">")
+                enemyScores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+                size = 169
+                a = numpy.empty((size+1,size+1,4))
+                a[...,(0,1,2)]=255
+                for cp in commonList:
+                    eScore = enemyScores.get(cp.Name,None)
+                    if eScore:
+                        a[max(0,min(size,size-int(round((cp.A_APS - cp.B_APS + 50)*0.01*size)))),
+                          int(round(eScore.APS*0.01*size)),(0)]=0
+                        
+                        a[max(0,min(size,size-int(round((cp.A_Survival - cp.B_Survival + 50)*0.01*size)))),
+                          int(round(eScore.Survival*0.01*size)),(2)]=0
+#                        if eScore.ANPP > 0 and b.NPP >= 0:
+ #                           a[size-int(round(b.NPP*0.01*size)),int(round(eScore.ANPP*0.01*size)),(0,1)]=0
+                
+                b = Image.fromarray(a.astype("uint8"), "CMYK")
+                c = cStringIO.StringIO()
+                b = b.convert("RGB")
+                a = numpy.array(b)
+                a[(a == (0,0,0)).all(axis=2)] = (255,255,255)
+                a[size - int(.5*size),...] = 127
+                a
+                b = Image.fromarray(a,"RGB")
+                b.save(c,format="png")
+                d = c.getvalue()
+                c.close()
+                e = base64.b64encode(d).decode("ascii")
+                out.append('<img title=\"Red = APS Diff, Blue = Survival Diff" style=\"border: black 1px solid;\" alt="score distibution" src="data:image/png;base64,')
+                out.append(e)
+                out.append("\">")#<br>Opponent APS vs. Pairing APS")
+                                
                 out.append("</td></tr>")
                 
                 APSa = 0.0
@@ -244,7 +294,10 @@ class BotCompare(webapp.RequestHandler):
                 Survivalb = 0.0
                 Winsa = 0.0
                 Winsb = 0.0
-                
+                Battlesa = 0
+                Battlesb = 0
+                LastUploada = None
+                LastUploadb = None
                 for cp in commonList:
                     APSa += cp.A_APS
                     APSb += cp.B_APS
@@ -254,7 +307,13 @@ class BotCompare(webapp.RequestHandler):
                         Winsa += 1.0
                     if cp.B_APS >= 50.0:
                         Winsb += 1.0
-                
+                    Battlesa += cp.A_Battles
+                    Battlesb += cp.B_Battles
+                    if cp.A_LastUpload > LastUploada:
+                        LastUploada = cp.A_LastUpload
+                    if cp.B_LastUpload > LastUploadb:
+                        LastUploadb = cp.B_LastUpload
+                    
                 
                 inv_len = 1.0/len(commonList)
                 APSa *= inv_len
@@ -267,12 +326,23 @@ class BotCompare(webapp.RequestHandler):
                 out.append("\n<tr><th>Common APS</th>")
                 out.append("\n<td>" + str(APSa) + "</td><td>" + str(APSb) + "</td></tr>")
                 out.append("\n<tr><th>Common Survival</th>")
-                out.append("\n<td>" + str(Survivala) + "</td><td>" + str(Survivalb) + "</td></tr>")
+                out.append("\n<td>" + str(Survivala) + "</td><td>" + str(Survivalb) + "</td>")
+                out.append("</tr>")
                 out.append("\n<tr><th>Common PWin</th>")
                 out.append("\n<td>" + str(Winsa) + "</td><td>" + str(Winsb) + "</td></tr>")
+                out.append("\n<tr><th>Common Battles</th>")
+                out.append("\n<td>" + str(Battlesa) + "</td><td>" + str(Battlesb) + "</td></tr>")
+                out.append("\n<tr><th>Common Last Upload</th>")
+                out.append("\n<td>" + str(LastUploada) + "</td><td>" + str(LastUploadb) + "</td></tr>")
+                out.append("\n<tr><th>Common Pairings</th>")
+                out.append("\n<td colspan=\"2\" align=\"center\">" + str(len(commonList)) + "</td>")
+                #out.append("<td>Opponent (X) vs. Diff (Y)</td>")
+                out.append("</tr>")
+                
                 out.append("\n</table>\n<br>\n<table>\n<tr>")
 
-                out.append("\n<td colspan=\"3\"></td><th colspan=\"2\">" + botaName + "</th><th colspan=\"2\">" + botbName + "</th><td colspan=\"2\"></td></tr><tr class=\"dim\">")
+                out.append("\n<td colspan=\"3\"></td><th colspan=\"2\">" + botaName + "</th><th colspan=\"2\">" + botbName + "</th><td colspan=\"2\">")
+                out.append("</td></tr><tr class=\"dim\">")
                 
                 headings = [
                 "  ",

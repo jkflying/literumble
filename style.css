@@ -40,15 +40,27 @@ td.red {
 	background-color: #f60;
 }
 
+.header {
+    position: absolute;
+}
+
 #flag {
     width: 30px;
     height: 18px;
 }
 
 #distribution {
+    position: relative;
     height: 220px;
     width: auto;
     align: center;
     border: black 1px solid;
 }
 
+#distribution2 {
+    position: relative;
+    height: 170px;
+    width: auto;
+    align: center;
+    border: black 1px solid;
+}

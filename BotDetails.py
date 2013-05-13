@@ -89,20 +89,21 @@ class BotDetails(webapp.RequestHandler):
                 memcache.set(keyhash,bot)
 #                global_dict[keyhash] = bot
                 cached = False
-
-        rumble = global_dict.get(game,None)
-        if rumble is None:
-            rumble = memcache.get(game)
+        rumble = None
+        if not api:
+            rumble = global_dict.get(game,None)
             if rumble is None:
-                rumble = structures.Rumble.get_by_key_name(game)
+                rumble = memcache.get(game)
                 if rumble is None:
-                    self.response.out.write("RUMBLE NOT FOUND")
-                    return
+                    rumble = structures.Rumble.get_by_key_name(game)
+                    if rumble is None:
+                        self.response.out.write("RUMBLE NOT FOUND")
+                        return
+                    else:
+                        global_dict[game]=rumble
+                        memcache.set(game,rumble)
                 else:
-                    global_dict[game]=rumble
-                    memcache.set(game,rumble)
-            else:
-                global_dict[game] = rumble
+                    global_dict[game] = rumble
                 
                 
         if bot is None:
@@ -129,7 +130,7 @@ class BotDetails(webapp.RequestHandler):
                 flagmap = marshal.loads(zlib.decompress(flagmap))
 
             bots = None
-            if lim > 0:
+            if lim > 0 or not api:
                 try:
                     bots = pickle.loads(zlib.decompress(bot.PairingsList))
                 except:
@@ -172,7 +173,7 @@ class BotDetails(webapp.RequestHandler):
                 
             retrievetime = time.time() - parsetime - starttime
             
-            if(lim > 0):
+            if lim > 0:
                 bots = filter(lambda b: getattr(b,'Alive',True), bots)
                 bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)            
             
@@ -260,21 +261,38 @@ class BotDetails(webapp.RequestHandler):
                 
                 enemyScores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
                 
-                a = numpy.zeros([101,101],)
+                #def pngString(arr)
+                size = 219
+                a = numpy.empty((size+1,size+1,4))
+                a[...,(0,1,2)]=255
+                a[size - int(.5*size),...,(0,1,2)] = 127
                 for b in bots:
                     eScore = enemyScores.get(b.Name,None)
                     if eScore:
-                        myScore = int(round(b.APS))
-                        theirAvg = int(round(eScore.APS))
-                        a[100-myScore,theirAvg]+=numpy.float(1.0)
-                a = numpy.log(1+a)
-                a *= 255/(numpy.max(a))
-                b = Image.fromarray(255 - a)
+                        a[max(0,min(size,size-int(round(b.APS*0.01*size)))),
+                          int(round(eScore.APS*0.01*size)),(0)]=0
+                        a[max(0,min(size,size-int(round(b.Survival*0.01*size)))),
+                          int(round(eScore.Survival*0.01*size)),(1)]=0
+                        
+                        a[max(0,min(size,size-int(round((b.KNNPBI+50)*0.01*size)))),
+                          int(round(eScore.APS*0.01*size)),(2)]=0
+#                        if eScore.ANPP > 0 and b.NPP >= 0:
+ #                           a[size-int(round(b.NPP*0.01*size)),int(round(eScore.ANPP*0.01*size)),(0,1)]=0
+                
+                b = Image.fromarray(a.astype("uint8"), "CMYK")
+                
+                b = b.convert("RGB")
+                a = numpy.array(b)
+                a[(a == (0,0,0)).all(axis=2)] = (255,255,255)
+                
+                
+                b = Image.fromarray(a,"RGB")
                 c = cStringIO.StringIO()
-                b.convert("RGB").save(c,format="png")
+                b.save(c,format="png")
                 d = c.getvalue()
+                c.close()
                 e = base64.b64encode(d).decode("ascii")
-                out.append('<img id="distribution" alt="score distibution" src="data:image/png;base64,')
+                out.append('<img title=\"Red = APS, Green = Survival, Blue = APS vs (KNNPBI+50)\" style=\"border: black 1px solid;\" alt="score distibution" src="data:image/png;base64,')
                 out.append(e)
                 out.append("\">")#<br>Opponent APS vs. Pairing APS")
                                 
@@ -294,14 +312,15 @@ class BotDetails(webapp.RequestHandler):
                 out.append("<input type=\"hidden\" name=\"bota\" value=\"" + name + "\" />")
                 out.append("<input type=\"text\" name=\"botb\" value=\"" + name + "\" />")
                 out.append("<input type=\"submit\" value=\"Compare\" /></form>")
-                out.append("</td><td>Opponent APS vs. Pairing APS</td></tr></table></div>")
+                out.append("</td><td>Opponent (X) vs. Pairing (Y) </td></tr></table>")
                 
                 
                 
                 
-                out.append("\n<table>\n<tr>\n")
+                
                 
                 if lim > 0:
+                    out.append("\n<table>\n<tr>\n")
                     headings = ["  ",
                     "Flag",
                     "Name",

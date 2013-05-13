@@ -32,6 +32,10 @@ class ComparePair:
         self.B_Survival = botb.Survival
         self.Diff_APS = self.A_APS - self.B_APS
         self.Diff_Survival = self.A_Survival - self.B_Survival
+        self.A_Battles = bota.Battles
+        self.B_Battles = botb.Battles
+        self.A_LastUpload = bota.LastUpload
+        self.B_LastUpload = botb.LastUpload
         
 
 class ScoreSet:
