@@ -54,7 +54,6 @@ handlers:
 - url: /style.css
   static_files: style.css
   upload: style.css
-  expiration: "10d"
 
 - url: /
   script: RumbleSelect.application
