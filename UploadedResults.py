@@ -101,6 +101,7 @@ class UploadedResults(webapp.RequestHandler):
             
             elapsed = time.time() - starttime
             self.response.out.write(" in " + str(int(round(elapsed*1000))) + "ms")
+            time.sleep(0.05)
             
         else:
             self.response.out.write("OK. CLIENT NOT SUPPORTED. Use one of: " + str(allowed_clients) + ", not " + client)
