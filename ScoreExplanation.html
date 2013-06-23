@@ -1,0 +1,55 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>LiteRumble - Scoring</title><link rel="stylesheet" type="text/css" media="all" href="style.css" /></head><body><h3>LiteRumble Scoring</h3>
+
+<table>
+<tr>
+<th>Pairing Score</th>
+<td>
+This is calculated by the points that the bots got against each other, according to the formula:
+<br>
+botA_Score = 100*botA_Points/(botA_Points + botB_Points)
+</td>
+</tr>
+<tr>
+<th>Pairing Survival</th>
+<td>This is calculated by the number of rounds that the bot survived the longest out of the total number of rounds, as a percentage. Formula:<br>
+botA_Survival = 100*botA_rounds_won/game_total_rounds
+</td>
+</tr>
+<tr>
+<th>APS</th>
+<td>
+<b>A</b>verage <b>P</b>ercentage <b>S</b>core. <br>This is simply the average score across all bots/pairings.
+</td>
+</tr>
+<tr>
+<th>PWIN</th>
+<td>
+<b>P</b>ercentage <b>WIN</b>. <br>This is the percentage of competitors that the bot gets a score of over 50% against.
+</td>
+</tr>
+<tr>
+<th>NPP</th>
+<td>
+<b>N</b>ormalised <b>P</b>ercentage <b>P</b>air.<br>This is a normalised score against each competitor, with the highest score against them mapped to 100% and the lowest score against them mapped to 0%. If all are the same, everybody gets 100%.
+</td>
+</tr>
+<tr>
+<th>ANPP</th>
+<td>
+<b>A</b>verage <b>N</b>ormalised <b>P</b>ercentage <b>P</b>air. <br>The average NPP score against all enemies.
+</td>
+</tr>
+<tr>
+<th>Vote</th>
+<td>
+A point for every competitor that that the bot is the best against. Thus, each bot 'votes' for the competitor that they did worst against. This is then adjusted to a percentage of the number of bots in the rumble. Ties are divided between competitors.
+</td>
+</tr>
+<tr>
+<th>KNNPBI</th>
+<td>
+<b>K N</b>earest <b>N</b>eighbours <b>P</b>roblem <b>B</b>ot <b>I</b>ndex. <br>The average score of the K bots surrounding (ie. above and below) this bot in the ranking (according to APS) is subtracted from your score against each enemy. If the result is positive, it shows you that you do better than expected against this enemy. If negative, these are 'problem bots' which your competitors do better against than you do. 
+<br>K = ceil(sqrt(bots_in_rumble/2))
+</table>
+</body>
+</html>

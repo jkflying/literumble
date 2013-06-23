@@ -1,5 +1,5 @@
 application: literumble
-version: 3-5
+version: 4-0
 runtime: python27
 threadsafe: yes
 api_version: 1
@@ -65,5 +65,25 @@ handlers:
   script: BatchRankings.application
   login: admin
 
+- url: .QueueBatchRankings
+  script: BatchRankings.application
+  login: admin
+
+- url: .QueueDailyBatchRankings
+  script: BatchRankings.application
+  login: admin
+
+- url: .ScoreExplanation
+  static_files: ScoreExplanation.html
+  upload: ScoreExplanation.html
+
 - url: .BotCompare
   script: BotCompare.application
+
+- url: .robots.txt
+  static_files: robots.txt
+  upload: robots.txt
+
+- url: .googlea1fa86d6b3ddcb15.html
+  static_files: googlea1fa86d6b3ddcb15.html
+  upload: googlea1fa86d6b3ddcb15.html

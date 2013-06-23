@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /BotCompare*
+Disallow: /*order=*
+Disallow: /*limit=*

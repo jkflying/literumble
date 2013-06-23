@@ -35,7 +35,7 @@ global_sync = {}
 last_write = {}
 locks = {}
 
-allowed_clients = ["1.8.1.0"]
+allowed_clients = ["1.8.1.0","1.8.2.0 Alpha 2"]
 allowed_versions = ["1"]
 
 
@@ -61,21 +61,47 @@ class UploadedResults(webapp.RequestHandler):
 
         version = results.get("version","ERROR")
         rumble = results.get("game",None)        
-        if version in allowed_versions and client in allowed_clients and rumble is not None:
+        bota = results.get("fname",None)
+        botb = results.get("sname",None)
+        
+        uploads_allowed = global_dict.get("uploads allowed",None)
+        uploads_allowed_expired = global_dict.get("uploads allowed check time",None)
+        if uploads_allowed is None or uploads_allowed_expired is None or datetime.datetime.now() > uploads_allowed_expired :
+            tq = taskqueue.Queue()
+            tqs_r = tq.fetch_statistics_async()
+            tqs = tqs_r.get_result()
+            last_min = tqs.executed_last_minute
+            if last_min is None or last_min == 0:
+                last_min = 1
+            tasks = tqs.tasks
+            if tasks is None:
+                tasks is 0
+            backlog = float(tasks)/last_min
+            uploads_allowed = backlog < 20
+            global_dict["uploads allowed"]=uploads_allowed
+            global_dict["uploads allowed check time"] = datetime.datetime.now() + datetime.timedelta(1./(24*6))
+        if not uploads_allowed:
+            bota_name = bota.split(" ")[0].split(".")[-1]
+            botb_name = botb.split(" ")[0].split(".")[-1]
+            self.response.out.write("OK. Queue full," + bota_name + " vs " + botb_name + " discarded.")
+            logging.info("Queue full, discarding " +  bota_name + " vs " + botb_name)
+            return
+        
+        if version in allowed_versions and client in allowed_clients and rumble is not None and bota is not None and botb is not None:
             
             try:
                 taskqueue.add(url='/HandleQueuedResults', payload=json.dumps(results))
+                bota_name = bota.split(" ")[0].split(".")[-1]
+                botb_name = botb.split(" ")[0].split(".")[-1]
+                logging.info("adding " +  bota_name + " vs " + botb_name )
             except apiproxy_errors.OverQuotaError:
-                bota = results["fname"]
-                botb = results["sname"]
                 bota_name = bota.split(" ")[0].split(".")[-1]
                 botb_name = botb.split(" ")[0].split(".")[-1]
                 self.response.out.write("OK. Queue full," + bota_name + " vs " + botb_name + " discarded.")
+                logging.info("discarding " +  bota_name + " vs " + botb_name + " via error")
                 #time.sleep(0.5)
                 return
             except taskqueue.Error:
-                bota = results["fname"]
-                botb = results["sname"]
                 bota_name = bota.split(" ")[0].split(".")[-1]
                 botb_name = botb.split(" ")[0].split(".")[-1]                
                 self.response.out.write("OK. Task queue error," + bota_name + " vs " + botb_name + " discarded.")
@@ -93,17 +119,16 @@ class UploadedResults(webapp.RequestHandler):
             except KeyError:
                 logging.info("No queue for rumble " + rumble + ", adding one!")
                 global_dict[rq_name] = Queue.Queue(maxsize=300)
-            bota = results["fname"]
-            botb = results["sname"]
             bota_name = bota.split(" ")[0].split(".")[-1]
             botb_name = botb.split(" ")[0].split(".")[-1]
             self.response.out.write("OK. " + bota_name + " vs " + botb_name + " added to queue")
             
             elapsed = time.time() - starttime
             self.response.out.write(" in " + str(int(round(elapsed*1000))) + "ms")
-            time.sleep(0.05)
+#            time.sleep(0.05)
             
         else:
+            logging.info("version: " + version)
             self.response.out.write("OK. CLIENT NOT SUPPORTED. Use one of: " + str(allowed_clients) + ", not " + client)
         
         #time.sleep(0.0)

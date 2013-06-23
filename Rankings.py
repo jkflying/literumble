@@ -193,6 +193,12 @@ class Rankings(webapp.RequestHandler):
             
             gameTitle = "RANKINGS - " + string.upper(game) + " WITH " + str(len(bots)) + " BOTS"
             out.append(structures.html_header % (game,gameTitle))
+            
+            pairVals = [b.Pairings for b in bots]
+            if max(pairVals) == min(pairVals) == (len(bots)-1):
+                out.append("<big>Rankings Stable</big>")
+            else:
+                out.append("<big>Rankings Not Stable</big>")
             out.append("\n<table>\n<tr>");
             
             headings = ["","Flag","Competitor","APS","PWIN","ANPP","Vote","Survival","Pairings","Battles","Latest Battle"]

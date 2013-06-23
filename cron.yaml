@@ -1,8 +1,7 @@
 cron:
 - description: calculate batch rankings
-  url: /BatchRankings 
-  schedule: every 4 hours synchronized
-  target: batchratings
+  url: /QueueDailyBatchRankings 
+  schedule: every 24 hours synchronized
 
 - description: poll main page
   url: /
@@ -14,4 +13,4 @@ cron:
 
 - description: refresh stats page
   url: /RumbleStats?regen=1
-  schedule: every 1 hours synchronized
+  schedule: every 10 minutes synchronized

@@ -37,6 +37,9 @@ locks = {}
 allowed_clients = ["1.7.4.2", "1.8.1.0 Alpha 7", "1.8.1.0"]
 allowed_versions = ["1"]
 
+def rreplace(s, old, new, occurrence):
+    li = s.rsplit(old, occurrence)
+    return new.join(li)
 
 class HandleQueuedResults(webapp.RequestHandler):
     def post(self):
@@ -75,6 +78,8 @@ class HandleQueuedResults(webapp.RequestHandler):
             
             bota = results.get("fname")
             botb = results.get("sname")
+            #bota = rreplace(bota,"_"," ",1)
+            #botb = rreplace(botb,"_"," ",1)
             #logging.debug("Bots : " + bota + " vs. " + botb)
             
             bd = [[bota, rumble], [botb, rumble]]
@@ -123,12 +128,15 @@ class HandleQueuedResults(webapp.RequestHandler):
                     pairingsarray[i] = pickle.loads(zlib.decompress(bots[i].PairingsList))
                     bots[i].PairingsList = None
                 except:
-                    pairsDicts = marshal.loads(zlib.decompress(bots[i].PairingsList))
-
-                    pairingsarray[i] = [structures.ScoreSet() for _ in pairsDicts]
-                    for s,d in zip(pairingsarray[i],pairsDicts):
-                        s.__dict__.update(d)
-                    bots[i].PairingsList = None
+                    try:
+                        pairsDicts = marshal.loads(zlib.decompress(bots[i].PairingsList))
+    
+                        pairingsarray[i] = [structures.ScoreSet() for _ in pairsDicts]
+                        for s,d in zip(pairingsarray[i],pairsDicts):
+                            s.__dict__.update(d)
+                        bots[i].PairingsList = None
+                    except:
+                        pairingsarray[i] = []
 
                 
                         
@@ -324,6 +332,8 @@ class HandleQueuedResults(webapp.RequestHandler):
                 b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),1)
                 b.LastUpload = apair.LastUpload
                 b.Pairings = alivePairings
+                
+                
             
             game.TotalUploads += 1
             
@@ -346,6 +356,16 @@ class HandleQueuedResults(webapp.RequestHandler):
                 uploader = structures.User(name=uploaderName)
                 uploaders[uploaderName] = uploader
             game.Uploaders = zlib.compress(pickle.dumps(uploaders,-1),1)
+            
+            for b in bots:
+                try:
+                    bUploaders = b.Uploaders
+                    if uploaderName not in bUploaders:
+                        bUploaders.append(uploaderName)
+                except:
+                    b.__dict__["Uploaders"] = [uploaderName]
+                    
+                    
 
             with sync_lock:
                 for b in bots:
@@ -354,9 +374,7 @@ class HandleQueuedResults(webapp.RequestHandler):
 
             minSize = min(60,len(scores)/2)
             
-            botsDict = {}
-            for b in bots:
-                botsDict[b.key_name] = b
+
                         
             if len(botsync) > minSize and not write_lock.locked():# and time.time() > last_write_time + 20:
                 
@@ -370,15 +388,15 @@ class HandleQueuedResults(webapp.RequestHandler):
                         #syncset = filter(lambda b: botsync[b] >= 2,syncset)
                     if len(syncset) >= min(10, len(scores)/2):
                         syncbotsDict = memcache.get_multi(syncset)
-                        botsDict.update(syncbotsDict)
+                        #botsDict.update(syncbotsDict)
                         with sync_lock:
                             syncbots = []
                             for sb in syncset:
-                                b = botsDict.get(sb,None)
+                                b = syncbotsDict.get(sb,None)
                                 
                                 if b is None or b.PairingsList is None:
                                     botsync.pop(sb,1)
-                                    botsDict.pop(sb,1)
+                                    syncbotsDict.pop(sb,1)
                                 else:
                                     syncbots.append(b)
                                     botsync.pop(sb,1)
@@ -398,7 +416,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                             for b in thisput:
                                 s = b.key().name()
                                 botsync.pop(s,1)
-                                botsDict.pop(s,1)
+                                syncbotsDict.pop(s,1)
                             
                         except Exception, e:
                             logging.error('Failed to write data: '+ str(e))
@@ -424,6 +442,10 @@ class HandleQueuedResults(webapp.RequestHandler):
                 game.put()
                 #db.put(bots)
                 memcache.delete("home")
+            
+            botsDict = {}
+            for b in bots:
+                botsDict[b.key_name] = b
                 
             infodict = {rumble:game}  #,syncname:zlib.compress(json.dumps(sync),1)}
             botsDict.update(infodict)
@@ -437,7 +459,11 @@ class HandleQueuedResults(webapp.RequestHandler):
        # puttime = time.time() - scorestime - retrievetime - starttime
         scoreVals = scores.values()
         maxPairs = len(scoreVals) - 1           
-        if game.PriorityBattles and ((not game.Melee) or (game.Melee and (random.random() < 0.0222 or min([bots[0].Pairings,bots[1].Pairings]) < maxPairs))): # or min(bots, key = lambda b: b.Battles) < game.AvgBattles):
+        if game.PriorityBattles and ((not game.Melee) or 
+        (random.random() < 0.0222 
+        or bots[0].Pairings != maxPairs or bots[1].Pairings != maxPairs
+        or min([bots[0].Battles,bots[1].Battles]) == min([b.Battles for b in scoreVals])
+        )): # or min(bots, key = lambda b: b.Battles) < game.AvgBattles):
             #do a gradient descent to the lowest battled pairings:
             #1: take the bot of this pair which has less pairings/battles
             #2: find an empty pairing or take a low pairing
@@ -450,18 +476,22 @@ class HandleQueuedResults(webapp.RequestHandler):
             # this just does a gradient descent... let's do a direct search since we alread have the data
 
             priobot2 = None                                
-            if bots[0].Pairings < maxPairs:
+            if bots[0].Pairings != maxPairs:
                 priobot = bots[0]
                 priopairs = pairingsarray[0]
-            elif bots[1].Pairings < maxPairs:
+            elif bots[1].Pairings != maxPairs:
                 priobot = bots[1]
                 priopairs = pairingsarray[1]
-            elif min([b.Pairings for b in scores.values()]) < maxPairs:
-                possBots = filter(lambda b: b.Pairings < maxPairs,scoreVals)
+            elif not all([b.Pairings == maxPairs for b in scoreVals if b.Active]) :
+                possBots = filter(lambda b: b.Pairings != maxPairs and b.Active,scoreVals)
                 priobot = random.choice(possBots)
                 priobot2 = random.choice(scoreVals).Name
-                while priobot2 == priobot.Name:
+                catch = 10
+                while priobot2 == priobot.Name and catch > 0:
                     priobot2 = random.choice(scoreVals).Name
+                    catch -= 1
+                if catch == 0:
+                    priobot2 = None
             elif bots[0].Battles <= bots[1].Battles:
                 priobot = bots[0]
                 priopairs = pairingsarray[0]
@@ -487,7 +517,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                     #select all unpaired bots
                     possPairs = []
                     for p in scores:
-                        if p not in pairsdict and p != priobot.Name:
+                        if p not in pairsdict and p != priobot.Name and scores[p].Active:
                             possPairs.append(p)
                             
                     if len(possPairs) > 0:
@@ -500,7 +530,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                     #sort for lowest battled pairing
                     #priopairs = sorted(priopairs, key = lambda score: score.Battles)
                     minbat = min([p.Battles for p in priopairs])
-                    possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name,priopairs)
+                    possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active,priopairs)
                     if len( possPairs) > 0:
                         priobot2 = random.choice(possPairs).Name
                         #choose low battles, but still random - prevents lots of duplicates

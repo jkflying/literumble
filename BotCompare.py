@@ -209,6 +209,8 @@ class BotCompare(webapp.RequestHandler):
                 sortOrder = order.replace(" ","_").replace("(","").replace(")","")
                 if len(sortOrder) > 2 and sortOrder[-2] == "_":
                     sortOrder = sortOrder[-1] + "_" + sortOrder[0:-2]
+                if order not in commonList[0].__dict__:
+                    order = "Name"
                 commonList = sorted(commonList, key=attrgetter(sortOrder), reverse=reverseSort)
                 #order = order.replace("_"," ")
                 
@@ -275,7 +277,7 @@ class BotCompare(webapp.RequestHandler):
                 b = b.convert("RGB")
                 a = numpy.array(b)
                 a[(a == (0,0,0)).all(axis=2)] = (255,255,255)
-                a[size - int(.5*size),...] = 127
+                a[size - int(round(.5*size)),...] = 127
                 a
                 b = Image.fromarray(a,"RGB")
                 b.save(c,format="png")

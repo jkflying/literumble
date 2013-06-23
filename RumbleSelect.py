@@ -103,7 +103,8 @@ class RumbleSelect(webapp.RequestHandler):
             
                 out.append(  "</table>")
             
-            out.append("<table><td><b><a href=\"RumbleStats\">LiteRumble Statistics</a></b></td></table>")
+            out.append("<table><tr><td><b><a href=\"RumbleStats\">LiteRumble Statistics</a></b></td></tr>")
+            out.append("<tr><td><b><a href=\"ScoreExplanation\">Score Explanation</a></b></td></tr></table>")
             
             out.append("<small><small>The LiteRumble costs ~$2/week in server time and database access.")
             out.append("\n<br>If you want help with these costs, please donate via Paypal. </small></small><br>")

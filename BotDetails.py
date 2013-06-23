@@ -175,6 +175,8 @@ class BotDetails(webapp.RequestHandler):
             
             if lim > 0:
                 bots = filter(lambda b: getattr(b,'Alive',True), bots)
+                if order not in bots[0].__dict__:
+                    order = "Name"
                 bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)            
             
             if api:
@@ -253,8 +255,8 @@ class BotDetails(webapp.RequestHandler):
                 gameTitle = "Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " + str(len(bots)) + " bots."
                 
                 flagtag = "<img id='flag' src=\"/flags/" + bot.Flag + ".gif\">  " + bot.Flag
-                
-                out.append(structures.html_header % (game,gameTitle))
+                endName = name.split(" ")[0].split(".")[-1]
+                out.append(structures.html_header % (endName + " in " + game,gameTitle))
                 out.append("<table>\n")
                 out.append("<tr>\n<th>Name</th>\n<td>\n" + name + "</td>\n<th>Score Distribution</th></tr>")
                 out.append("<tr>\n<th>Flag</th>\n<td>\n" + flagtag + "</td><td rowspan=\"9\">")
@@ -265,7 +267,7 @@ class BotDetails(webapp.RequestHandler):
                 size = 219
                 a = numpy.empty((size+1,size+1,4))
                 a[...,(0,1,2)]=255
-                a[size - int(.5*size),...,(0,1,2)] = 127
+                a[size - int(round(.5*size)),...,(0,1,2)] = 127
                 for b in bots:
                     eScore = enemyScores.get(b.Name,None)
                     if eScore:
