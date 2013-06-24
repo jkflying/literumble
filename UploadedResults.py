@@ -35,7 +35,7 @@ global_sync = {}
 last_write = {}
 locks = {}
 
-allowed_clients = ["1.8.1.0","1.8.2.0 Alpha 2"]
+allowed_clients = ["1.8.1.0","1.8.2.0"]
 allowed_versions = ["1"]
 
 
@@ -125,7 +125,8 @@ class UploadedResults(webapp.RequestHandler):
             
             elapsed = time.time() - starttime
             self.response.out.write(" in " + str(int(round(elapsed*1000))) + "ms")
-#            time.sleep(0.05)
+            if results["user"] == "Put_Your_Name_Here":
+                self.response.out.write("\nPlease set your username in /robocode/roborumble/{rumblename}.txt!")
             
         else:
             logging.info("version: " + version)
