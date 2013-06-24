@@ -47,7 +47,7 @@ class QueueDailyBatchRankings(webapp.RequestHandler):
     def get(self):  
         taskqueue.add(url='/BatchRankings',
                       target="batchratings",
-                      payload="minwrite",
+                      payload="minwrite=true",
                       countdown=0)
         for i in [4,8,12,16,20]:
             taskqueue.add(url='/BatchRankings',
