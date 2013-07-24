@@ -35,9 +35,6 @@ global_sync = {}
 last_write = {}
 locks = {}
 
-allowed_clients = ["1.8.1.0","1.8.2.0"]
-allowed_versions = ["1"]
-
 
 class UploadedResults(webapp.RequestHandler):
     def post(self):
@@ -87,7 +84,11 @@ class UploadedResults(webapp.RequestHandler):
             logging.info("Queue full, discarding " +  bota_name + " vs " + botb_name)
             return
         
-        if version in allowed_versions and client in allowed_clients and rumble is not None and bota is not None and botb is not None:
+        if (version in structures.allowed_versions 
+            and client in structures.allowed_clients 
+            and rumble is not None 
+            and bota is not None 
+            and botb is not None):
             
             try:
                 taskqueue.add(url='/HandleQueuedResults', payload=json.dumps(results))

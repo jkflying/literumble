@@ -34,8 +34,7 @@ global_sync = {}
 last_write = {}
 locks = {}
 
-allowed_clients = ["1.7.4.2", "1.8.1.0 Alpha 7", "1.8.1.0"]
-allowed_versions = ["1"]
+
 
 def rreplace(s, old, new, occurrence):
     li = s.rsplit(old, occurrence)
