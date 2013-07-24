@@ -188,7 +188,7 @@ class BatchRankings(webapp.RequestHandler):
                     for q,p in enumerate(pairings):
                         j = botIndexes.get(p.Name,-1)
                         if j != -1:
-                            APSs[j,i] = numpy.float(p.APS)
+                            APSs[j,i] = numpy.float64(p.APS)
                             p.Alive = True
                             alivePairings += 1
                         else:
@@ -210,8 +210,8 @@ class BatchRankings(webapp.RequestHandler):
                         b.PairingsList = zlib.compress(pickle.dumps(pairings,-1),1)
                     
                             
-                APSs += 100 - APSs.transpose()
-                APSs *= 0.5
+                APSs += numpy.float64(100) - APSs.transpose()
+                APSs *= numpy.float64(0.5)
                 
                 numpy.fill_diagonal(APSs, numpy.nan)
                 
@@ -260,13 +260,13 @@ class BatchRankings(webapp.RequestHandler):
                 
                 mins = numpy.nanmin(APSs,1)            
                 maxs = numpy.nanmax(APSs,1)
-                inv_ranges = 1.0/(maxs - mins)
+                inv_ranges = numpy.float64(1.0)/(maxs - mins)
                 NPPs = -numpy.ones((botlen,botlen))
                 for i in range(botlen):
                     if numpy.isfinite(inv_ranges[i]):
-                        NPPs[i,:] = 100*(APSs[i,:] - mins[i]) * inv_ranges[i]
+                        NPPs[i,:] = numpy.float64(100)*(APSs[i,:] - mins[i]) * inv_ranges[i]
                     else:
-                        NPPs[i,:] = 100
+                        NPPs[i,:] = numpy.float64(100)
                 
                 #NPPs[NPPs] = -1
                 
@@ -320,7 +320,7 @@ class BatchRankings(webapp.RequestHandler):
                                 totalNPP += p.NPP
                                 nppCount += 1
                                 
-                            if changePotential and not (p.KNNPBI == 0.0 and p.NPP == -1 ):
+                            if changePotential and p.KNNPBI != 0.0 and p.NPP != -1 :
                                 changed = True
                         else:
                             p.Alive = False
@@ -395,9 +395,10 @@ class BatchRankings(webapp.RequestHandler):
                         db.put(subset)
                     logging.info("wrote " + str(len(writebots)) + " changed bots to database")
                 changedBots = None
-                
-                r.BatchScoresAccurate = True
+                if write or minwrite:
+                    r.BatchScoresAccurate = True
                 memcache.set(r.Name,r)
+                
                 r.put()
                 #gc.collect()
                 r = None
