@@ -87,7 +87,7 @@ class RumbleStats(webapp.RequestHandler):
             out = []
             out.append(structures.html_header % ("Statistics","LiteRumble Statistics"))
             out.append("\nStats generated: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC")
-            out.append("\nAllowed Robocode versions: " + str(structures.allowed_clients) + "\n<br>\n<br>\n")
+            out.append("\nAllowed Robocode versions: " + str(structures.allowed_clients) + "\n<br>\n")
             q = structures.Rumble.all()
             rumbles = [[],[],[]]
             categories = ["1v1","Melee","Teams"]
