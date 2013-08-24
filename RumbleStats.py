@@ -153,6 +153,8 @@ class RumbleStats(webapp.RequestHandler):
                     
                     #out.append("\n<tr><td></td><td><i><u>Uploader Name</u></i></td><td></td><td></td></tr>")
                     uv = uploaders.values()
+                    cutoff = datetime.datetime.now() - datetime.timedelta(31)
+                    uv = filter(lambda u: datetime.datetime.strptime(u.latest,"%Y-%m-%d %H:%M:%S") > cutoff, uv)
                     uv.sort(key = lambda u: u.latest, reverse=True)                    
                     for j,u in enumerate(uv):
 #                        if j == 0:

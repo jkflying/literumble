@@ -40,19 +40,23 @@ def dict_split(d, chunk_size=1):
 class QueueBatchRankings(webapp.RequestHandler):
     def get(self):  
         taskqueue.add(url='/BatchRankings',
-                      target="batchratings",
+                     # target="batchratings",
                       payload=self.request.query_string)
 
 class QueueDailyBatchRankings(webapp.RequestHandler):
     def get(self):  
         taskqueue.add(url='/BatchRankings',
-                      target="batchratings",
+                     # target="batchratings",
                       payload="minwrite=true",
                       countdown=0)
         for i in [4,8,12,16,20]:
             taskqueue.add(url='/BatchRankings',
-                          target="batchratings",
+                       #   target="batchratings",
                           payload="",countdown=i*3600)
+
+class StartBackend(webapp.RequestHandler):
+    def get(self):
+        return
                       
 
 class BatchRankings(webapp.RequestHandler):
@@ -78,10 +82,12 @@ class BatchRankings(webapp.RequestHandler):
             write = bool(requests.get("write",False))
             minwrite = bool(requests.get("minwrite",False))
             
+            rpcList = []
+            client = memcache.Client()
+            
             q = structures.Rumble.all()
             
             for r in q.run():
-                   #clear garbage before loading lots of data!
                 memr = memcache.get(r.Name)
                 if memr is not None:
                     r = memr
@@ -89,8 +95,8 @@ class BatchRankings(webapp.RequestHandler):
                     continue
     
     
-                gc.collect()            
-                gc.collect(2)               
+                #gc.collect()            
+                #gc.collect(2)               
                 
                 logging.info("mem usage at start of " + r.Name + ": " + str(runtime.memory_usage().current()) + "MB")
                 try:
@@ -106,7 +112,7 @@ class BatchRankings(webapp.RequestHandler):
                     continue
                         
                 r.ParticipantsScores = None
-                gc.collect()
+                #gc.collect()
     
                 particHash = [p + "|" + r.Name for p in scores]
                 
@@ -114,6 +120,7 @@ class BatchRankings(webapp.RequestHandler):
                 ppDict = {}
                 for l in particSplit:
                     ppDict.update(memcache.get_multi(l))
+                    time.sleep(0.1)
                 
                 
                 particSplit = None
@@ -161,7 +168,7 @@ class BatchRankings(webapp.RequestHandler):
                 get_key = attrgetter("APS")
                 bots.sort( key=lambda b: get_key(b), reverse=True)
                 
-                gc.collect()   
+                #gc.collect()   
        
                 botIndexes = {}
                 for i,b in enumerate(bots):
@@ -215,7 +222,7 @@ class BatchRankings(webapp.RequestHandler):
                 
                 numpy.fill_diagonal(APSs, numpy.nan)
                 
-                gc.collect()
+                #gc.collect()
                 logging.info(str(len(bots)) + " bots loaded, total of " + str(totalAlivePairs) + " alive pairings")
                 logging.info("mem usage after unzipping pairings: " + str(runtime.memory_usage().current()) + "MB")        
                 
@@ -255,7 +262,7 @@ class BatchRankings(webapp.RequestHandler):
                 #KNN_PBI[KNN_PBI == numpy.nan] = -1
     
                 
-                logging.info("mem usage after KNNPBI: " + str(runtime.memory_usage().current()) + "MB")         
+                #logging.info("mem usage after KNNPBI: " + str(runtime.memory_usage().current()) + "MB")         
                 # Avg Normalised Pairing Percentage
                 
                 mins = numpy.nanmin(APSs,1)            
@@ -270,7 +277,7 @@ class BatchRankings(webapp.RequestHandler):
                 
                 #NPPs[NPPs] = -1
                 
-                logging.info("mem usage after ANPP: " + str(runtime.memory_usage().current()) + "MB")   
+                #logging.info("mem usage after ANPP: " + str(runtime.memory_usage().current()) + "MB")   
                 
                 changedBots = []#bots with new pairings since last run
                 
@@ -345,19 +352,24 @@ class BatchRankings(webapp.RequestHandler):
                         botsdict[b.key_name] = b
                     if changed:
                         changedBots.append(b)
-                    
+                
+                KNN_PBI = None
+                APSs = None
+                NPPs = None
                 logging.info("mem usage after zipping: " + str(runtime.memory_usage().current()) + "MB")     
     
                 #gc.collect()
                 #logging.info("mem usage after gc: " + str(runtime.memory_usage().current()) + "MB")     
-                
                 if len(botsdict) > 0:
                     splitlist = dict_split(botsdict,32)
+                    logging.info("split bots into " + str(len(splitlist)) + " sections")
+                    
                     for d in splitlist:
-                        memcache.set_multi(d)
+                        rpcList.append(client.set_multi_async(d))
+                        time.sleep(0.1)
                     
                     logging.info("wrote " + str(len(botsdict)) + " bots to memcache")
-                    #global_dict.update(botsdict)
+
                 
                 
                 botsdict.clear()
@@ -366,10 +378,11 @@ class BatchRankings(webapp.RequestHandler):
                 scores = {b.Name: structures.LiteBot(b) for b in bots}
                 
                # bots = None
-                gc.collect()
+                r.ParticipantsScores = None
+                #gc.collect()
                 
                 r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),3))
-                #logging.info("mem usage after scores zipping: " + str(runtime.memory_usage().current()) + "MB")     
+                logging.info("mem usage after participants zipping: " + str(runtime.memory_usage().current()) + "MB")     
                 #r.ParticipantsScores = zlib.compress(marshal.dumps([scores[s].__dict__ for s in scores]),4)
                 scores = None
                 
@@ -382,8 +395,10 @@ class BatchRankings(webapp.RequestHandler):
                     write_lists = list_split(writebots,50)
                     for subset in write_lists:                    
                         db.put(subset)
+                        time.sleep(0.1)#throttle
                     logging.info("wrote " + str(len(writebots)) + " bots to database")
-                    
+                bots = None
+                
                 if minwrite:
                     writebots = [None]*len(changedBots)
                     for i,b in enumerate(changedBots):
@@ -393,28 +408,38 @@ class BatchRankings(webapp.RequestHandler):
                     write_lists = list_split(writebots,50)
                     for subset in write_lists:                    
                         db.put(subset)
+                        time.sleep(0.1)
                     logging.info("wrote " + str(len(writebots)) + " changed bots to database")
                 changedBots = None
+                
                 if write or minwrite:
                     r.BatchScoresAccurate = True
-                memcache.set(r.Name,r)
                 
-                r.put()
+                rpcList.append(client.set_multi_async({r.Name:r}))
+                
+                db.put([r])
                 #gc.collect()
                 r = None
                 logging.info("mem usage after write: " + str(runtime.memory_usage().current()) + "MB")     
                 
                     
+            for rpc in rpcList:
+                rpc.get_result()
                 
             elapsed = time.time() - starttime    
+            logging.info("Success in " + str(round(1000*elapsed)/1000) + "s")
             self.response.out.write("Success in " + str(round(1000*elapsed)) + "ms")
         except:
             logging.exception('')
+            elapsed = time.time() - starttime   
+            logging.info("Error in " + str(round(1000*elapsed)/1000) + "s")
+            self.response.out.write("Error in " + str(round(1000*elapsed)) + "ms")
 
 application = webapp.WSGIApplication([
     ('/BatchRankings', BatchRankings),
     ('/QueueBatchRankings', QueueBatchRankings),
-    ('/QueueDailyBatchRankings', QueueDailyBatchRankings)
+    ('/QueueDailyBatchRankings', QueueDailyBatchRankings),
+    ('/_ah/start', StartBackend)
 ], debug=True)
 
 

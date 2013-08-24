@@ -368,7 +368,11 @@ class HandleQueuedResults(webapp.RequestHandler):
 
             with sync_lock:
                 for b in bots:
-                    key = b.key_name
+                    key = None
+                    if isinstance(b,structures.BotEntry):
+                        key = b.key().name()
+                    else:
+                        key = b.key_name
                     botsync[key] = botsync.get(key,0) + 1
 
             minSize = min(60,len(scores)/2)
@@ -405,7 +409,14 @@ class HandleQueuedResults(webapp.RequestHandler):
                             thisput = []
                             while len(syncbots) > 0:
                                 b = syncbots.pop(-1)
-                                putb = structures.BotEntry(key_name = b.key_name)
+                                
+                                key = None
+                                if isinstance(b,structures.BotEntry):
+                                    key = b.key().name()
+                                else:
+                                    key = b.key_name                                
+                                
+                                putb = structures.BotEntry(key_name = key)
                                 putb.init_from_cache(b)
                                 thisput.append(putb)
     
@@ -444,14 +455,24 @@ class HandleQueuedResults(webapp.RequestHandler):
             
             botsDict = {}
             for b in bots:
-                botsDict[b.key_name] = b
+                key = None
+                if isinstance(b,structures.BotEntry):
+                    key = b.key().name()
+                else:
+                    key = b.key_name
+                botsDict[key] = b
                 
             infodict = {rumble:game}  #,syncname:zlib.compress(json.dumps(sync),1)}
             botsDict.update(infodict)
                                 
             global_dict.update(infodict)    
             for b in bots:
-                botsDict[b.key_name] = b
+                key = None
+                if isinstance(b,structures.BotEntry):
+                    key = b.key().name()
+                else:
+                    key = b.key_name
+                botsDict[key] = b
             memcache.set_multi(botsDict)
 
         

@@ -13,6 +13,7 @@ libraries:
 
 builtins:
 - remote_api: on
+- appstats: on
 
 error_handlers:
 - error_code: over_quota
@@ -60,10 +61,6 @@ handlers:
 
 - url: .RumbleStats
   script: RumbleStats.application
-  
-- url: .BatchRankings
-  script: BatchRankings.application
-  login: admin
 
 - url: .QueueBatchRankings
   script: BatchRankings.application
