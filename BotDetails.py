@@ -254,7 +254,7 @@ class BotDetails(webapp.RequestHandler):
                 gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\">" + game + "</a>"
                 gameTitle = "Bot details of <b>" + name + "</b> in "+ gameHref + " vs. " + str(len(bots)) + " bots."
                 
-                flagtag = "<img id='flag' src=\"/flags/" + bot.Flag + ".gif\">  " + bot.Flag
+                flagtag = "<img id='flag' src=\"/flags/" + bot.Flag + ".gif\">  " + structures.country_lookup[bot.Flag]
                 endName = name.split(" ")[0].split(".")[-1]
                 out.append(structures.html_header % (endName + " in " + game,gameTitle))
                 out.append("<table>\n")
