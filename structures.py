@@ -41,10 +41,10 @@ class ComparePair:
         
 
 class ScoreSet:
-    def __init__ (self, name = "", aps = 0.0, variance = 0.0, survival = 0.0, battles = 0, lastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
+    def __init__ (self, name = "", aps = 0.0, min_aps = 100.0, survival = 0.0, battles = 0, lastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
         self.Name = name
         self.APS = aps
-        self.Variance = variance
+        self.Min_APS = min_aps
         self.Survival = survival
         self.Battles = battles
         self.LastUpload = lastUpload
@@ -170,6 +170,9 @@ html_header = """<!DOCTYPE html><html><head><meta charset="utf-8"><title>LiteRum
 
 
 country_lookup = {
+ "NONE" : "Unknown",
+ "MAN" : "Unknown",
+ "WIKI": "Unknown",
  "AFG" : "Afghanistan",
  "AGO" : "Angola",
  "AIA" : "Anguilla",

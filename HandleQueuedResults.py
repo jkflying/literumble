@@ -282,10 +282,11 @@ class HandleQueuedResults(webapp.RequestHandler):
 
             apair.APS *= float(aBattles)*inv_ab
             apair.APS += APSa*inv_ab
-            
+            apair.__dict__["Min_APS"] = min(APSa,apair.__dict__.get("Min_APS",100))
             #bpair.APS *= float(bBattles)/(bBattles + 1)
             #bpair.APS += APSb/(bBattles+1)
             bpair.APS = 100 - apair.APS
+            bpair.__dict__["Min_APS"] = min(100-APSa,bpair.__dict__.get("Min_APS",100))
                         
             apair.Survival *= float(aBattles)*inv_ab
             apair.Survival += survivala*inv_ab
@@ -512,12 +513,26 @@ class HandleQueuedResults(webapp.RequestHandler):
                     catch -= 1
                 if catch == 0:
                     priobot2 = None
-            elif bots[0].Battles <= bots[1].Battles:
-                priobot = bots[0]
-                priopairs = pairingsarray[0]
             else:
-                priobot = bots[1]
-                priopairs = pairingsarray[1]
+                minBattles = 1.1*min([b.Battles for b in scoreVals if b.Active])
+                possBots = filter(lambda b: b.Battles <= minBattles and b.Active, scoreVals )
+                
+                names = [b.Name for b in possBots]
+                if bots[1].Name not in names and bots[0].Name not in names:
+                    priobot = random.choice(possBots)
+                    priobot2 = random.choice(scoreVals).Name
+                    catch = 10
+                    while priobot2 == priobot.Name and catch > 0:
+                        priobot2 = random.choice(scoreVals).Name
+                        catch -= 1
+                    if catch == 0:
+                        priobot2 = None
+                elif bots[0].Battles <= bots[1].Battles:
+                    priobot = bots[0]
+                    priopairs = pairingsarray[0]
+                else:
+                    priobot = bots[1]
+                    priopairs = pairingsarray[1]
             
            # prioPack = [s for s in scores if s.Pairings < len(scores)-1 ]  
            # if len(prioPack) > 0:
