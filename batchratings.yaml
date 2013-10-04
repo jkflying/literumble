@@ -2,7 +2,7 @@ api_version: '1'
 application: literumble
 basic_scaling:
   max_instances: '1'
-  idle_timeout: 15m
+  idle_timeout: 5m
 
 handlers:
 - login: admin
@@ -22,8 +22,8 @@ libraries:
 - name: PIL
   version: latest
 
-builtins:
-- appstats: on
+#builtins:
+#- appstats: on
 
 module: batchratings
 runtime: python27
