@@ -11,9 +11,9 @@ libraries:
 - name: PIL
   version: "latest"
 
-builtins:
-- remote_api: on
-- appstats: on
+#builtins:
+#- remote_api: on
+#- appstats: on
 
 error_handlers:
 - error_code: over_quota
