@@ -49,7 +49,7 @@ class QueueDailyBatchRankings(webapp.RequestHandler):
                      # target="batchratings",
                       payload="minwrite=true",
                       countdown=0)
-        for i in [4,8,12,16,20]:
+        for i in [6,12,18]:
             taskqueue.add(url='/BatchRankings',
                        #   target="batchratings",
                           payload="",countdown=i*3600)
@@ -86,17 +86,24 @@ class BatchRankings(webapp.RequestHandler):
             client = memcache.Client()
             
             q = structures.Rumble.all()
-            
+            rumbles = []
             for r in q.run():
                 memr = memcache.get(r.Name)
                 if memr is not None:
                     r = memr
                 if r.BatchScoresAccurate and not force:
                     continue
+                rumbles.append(r)
+                
+            for r in rumbles:
+                scoresdicts = pickle.loads(zlib.decompress(r.ParticipantsScores))
+                entries = len(scoresdicts)
+                r.__dict__["entries"] = entries 
+            rumbles.sort(key = lambda r: -r.__dict__["entries"])
     
-    
+            for r in rumbles:
                 #gc.collect()            
-                #gc.collect(2)               
+                gc.collect(2)               
                 
                 logging.info("mem usage at start of " + r.Name + ": " + str(runtime.memory_usage().current()) + "MB")
                 try:
@@ -168,7 +175,7 @@ class BatchRankings(webapp.RequestHandler):
                 get_key = attrgetter("APS")
                 bots.sort( key=lambda b: get_key(b), reverse=True)
                 
-                #gc.collect()   
+                gc.collect()   
        
                 botIndexes = {}
                 for i,b in enumerate(bots):
@@ -216,13 +223,14 @@ class BatchRankings(webapp.RequestHandler):
                     if removed:
                         b.PairingsList = zlib.compress(pickle.dumps(pairings,-1),1)
                     
-                            
+                gc.collect()                            
+                
                 APSs += numpy.float64(100) - APSs.transpose()
                 APSs *= numpy.float64(0.5)
                 
                 numpy.fill_diagonal(APSs, numpy.nan)
                 
-                #gc.collect()
+                gc.collect()
                 logging.info(str(len(bots)) + " bots loaded, total of " + str(totalAlivePairs) + " alive pairings")
                 logging.info("mem usage after unzipping pairings: " + str(runtime.memory_usage().current()) + "MB")        
                 
@@ -358,15 +366,15 @@ class BatchRankings(webapp.RequestHandler):
                 NPPs = None
                 logging.info("mem usage after zipping: " + str(runtime.memory_usage().current()) + "MB")     
     
-                #gc.collect()
+                gc.collect()
                 #logging.info("mem usage after gc: " + str(runtime.memory_usage().current()) + "MB")     
                 if len(botsdict) > 0:
-                    splitlist = dict_split(botsdict,32)
+                    splitlist = dict_split(botsdict,20)
                     logging.info("split bots into " + str(len(splitlist)) + " sections")
                     
                     for d in splitlist:
                         rpcList.append(client.set_multi_async(d))
-                        time.sleep(0.1)
+                        time.sleep(1) #throttle
                     
                     logging.info("wrote " + str(len(botsdict)) + " bots to memcache")
 
@@ -379,7 +387,7 @@ class BatchRankings(webapp.RequestHandler):
                 
                # bots = None
                 r.ParticipantsScores = None
-                #gc.collect()
+                gc.collect()
                 
                 r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),3))
                 logging.info("mem usage after participants zipping: " + str(runtime.memory_usage().current()) + "MB")     
@@ -411,6 +419,7 @@ class BatchRankings(webapp.RequestHandler):
                         time.sleep(0.1)
                     logging.info("wrote " + str(len(writebots)) + " changed bots to database")
                 changedBots = None
+                gc.collect()
                 
                 if write or minwrite:
                     r.BatchScoresAccurate = True
