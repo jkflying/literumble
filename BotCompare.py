@@ -66,13 +66,14 @@ class BotCompare(webapp.RequestHandler):
             extraArgs += "&amp;timing=1"
         reverseSort = True
         
-        if order is None:
+        if order is None or order == "" or order.replace(" ","") == "":
             order = "Name"
             reverseSort = False
             
         elif order[0] == "-":
             order = order[1:]
             reverseSort = False
+            
         if order == "Latest Battle":
             order = "LastUpload"
         
@@ -209,8 +210,15 @@ class BotCompare(webapp.RequestHandler):
                 sortOrder = order.replace(" ","_").replace("(","").replace(")","")
                 if len(sortOrder) > 2 and sortOrder[-2] == "_":
                     sortOrder = sortOrder[-1] + "_" + sortOrder[0:-2]
-                if order not in commonList[0].__dict__:
+                out = []
+                
+                #out.append("\n\n" + order + "\n\n")
+                #out.append("\n\n" + str(commonList[0].__dict__) + "\n\n")
+                
+                if sortOrder not in commonList[0].__dict__:
                     order = "Name"
+                    sortOrder = "Name"
+                    
                 commonList = sorted(commonList, key=attrgetter(sortOrder), reverse=reverseSort)
                 #order = order.replace("_"," ")
                 
@@ -218,7 +226,7 @@ class BotCompare(webapp.RequestHandler):
                 if order == "LastUpload":
                     order = "Latest Battle"
                 
-                out = []
+                
                 
                 package = string.split(bota.Name,".")[0]
                 if package in flagmap:
@@ -355,8 +363,9 @@ class BotCompare(webapp.RequestHandler):
                 "APS (B)",
                 "Survival (B)",
                 "Diff APS",
-                "Diff Survival"]
-                
+                "Diff Survival"
+                ]
+                #out.append("\n\n" + order + "\n\n")
                 for heading in headings:
                     headinglink = heading
                     sortedBy = (order == heading)
@@ -371,11 +380,12 @@ class BotCompare(webapp.RequestHandler):
                         out.append("\n<th class=\"sortedby\">" + orderHref + "</th>")
                     else:
                         out.append("\n<th>" + orderHref + "</th>")
+                        
                 out.append("\n</tr>")
                 rank = 1
                 highlightKey = [False,False,False,True,True,True,True,True,True]
                 mins = [0,0,0,40,40,40,40,-0.1,-5]
-                maxs = [0,0,0,60,60,60,60,0.1,5]
+                maxs = [0,0,0,60,60,60,60, 0.1, 5]
                 for cp in commonList:
                     if rank > lim:
                         break
@@ -415,7 +425,7 @@ class BotCompare(webapp.RequestHandler):
                 htmltime = time.time() - sorttime - retrievetime - parsetime - starttime 
                 elapsed = time.time() - starttime
                 if timing:
-                    out.append(  "<br>\n Page served in " + str(int(round(elapsed*1000))) + "ms. Bot cached: " + str(cached))
+                    out.append("<br>\n Page served in " + str(int(round(elapsed*1000))) + "ms. Bot cached: " + str(cached))
                     out.append("\n<br> parsing: " + str(int(round(parsetime*1000))) )
                     out.append("\n<br> retrieve: " + str(int(round(retrievetime*1000))) )
                     out.append("\n<br> sort: " + str(int(round(sorttime*1000))) )
