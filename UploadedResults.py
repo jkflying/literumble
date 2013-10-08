@@ -130,8 +130,8 @@ class UploadedResults(webapp.RequestHandler):
                 self.response.out.write("\nPlease set your username in /robocode/roborumble/{rumblename}.txt!")
             
         else:
-            logging.info("version: " + version)
-            self.response.out.write("OK. CLIENT NOT SUPPORTED. Use one of: " + str(allowed_clients) + ", not " + client)
+            logging.info("version: " + client)
+            self.response.out.write("OK. CLIENT NOT SUPPORTED. Use one of: " + str(structures.allowed_clients) + ", not " + client)
         
         #time.sleep(0.0)
 
