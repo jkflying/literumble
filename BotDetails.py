@@ -61,7 +61,7 @@ class BotDetails(webapp.RequestHandler):
             extraArgs += "&amp;timing=1"
         reverseSort = True
         
-        if order is None:
+        if order is None or order.replace(" ","") == "":
             order = "Name"
             reverseSort = False
             
@@ -287,7 +287,6 @@ class BotDetails(webapp.RequestHandler):
                 a = numpy.array(b)
                 a[(a == (0,0,0)).all(axis=2)] = (255,255,255)
                 
-                
                 b = Image.fromarray(a,"RGB")
                 c = cStringIO.StringIO()
                 b.save(c,format="png")
@@ -297,7 +296,6 @@ class BotDetails(webapp.RequestHandler):
                 out.append('<img title=\"Red = APS, Green = Survival, Blue = APS vs (KNNPBI+50)\" style=\"border: black 1px solid;\" alt="score distibution" src="data:image/png;base64,')
                 out.append(e)
                 out.append("\">")#<br>Opponent APS vs. Pairing APS")
-                                
                 
                 out.append("</td></tr>")
                 out.append("<tr>\n<th>APS</th>\n<td>\n" + str(bot.APS) + "</td></tr>")
@@ -315,11 +313,6 @@ class BotDetails(webapp.RequestHandler):
                 out.append("<input type=\"text\" name=\"botb\" value=\"" + name + "\" />")
                 out.append("<input type=\"submit\" value=\"Compare\" /></form>")
                 out.append("</td><td>Opponent (X) vs. Pairing (Y) </td></tr></table>")
-                
-                
-                
-                
-                
                 
                 if lim > 0:
                     out.append("\n<table>\n<tr>\n")
@@ -352,7 +345,7 @@ class BotDetails(webapp.RequestHandler):
                     rank = 0
                     highlightKey = [False,False,False,False,True,True,True,True,False,False]
                     mins = [0,0,0,0,40,40,40,-0.1,0,0]
-                    maxs = [0,0,0,0,60,70,60,0.1,0,0]
+                    maxs = [0,0,0,0,60,70,60, 0.1,0,0]
                     for bot in bots:
                         rank += 1
                         if rank > lim:
@@ -400,7 +393,6 @@ class BotDetails(webapp.RequestHandler):
                     out.append("\n<br /> retrieve: " + str(int(round(retrievetime*1000))) )
                     out.append("\n<br /> sort: " + str(int(round(sorttime*1000))) )
                     out.append("\n<br /> html generation: " + str(int(round(htmltime*1000))) )
-
 
                 out.append(  "</body></html>")
                 
