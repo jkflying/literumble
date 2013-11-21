@@ -93,17 +93,19 @@ def removeFromRumble(self,requests):
     entry.Active = False
     
     try:
+        scores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+    except:
         scoresdicts = marshal.loads(zlib.decompress(rumble.ParticipantsScores))
         scoreslist = [structures.LiteBot() for _ in scoresdicts]
         for s,d in zip(scoreslist,scoresdicts):
             s.__dict__.update(d)
         scores = {s.Name:s for s in scoreslist}
-    except:
-        scores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+
+        
         
     scores.pop(name,1)
-    #rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),4)
-    rumble.ParticipantsScores = zlib.compress(marshal.dumps([scores[s].__dict__ for s in scores]),4)
+    rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),4)
+    #rumble.ParticipantsScores = zlib.compress(marshal.dumps([scores[s].__dict__ for s in scores]),4)
     
     
     memcache.delete("home")
