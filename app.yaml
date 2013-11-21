@@ -1,8 +1,16 @@
 application: literumble
-version: 4-0
+version: 4-4
 runtime: python27
 threadsafe: yes
 api_version: 1
+
+instance_class: F1
+automatic_scaling:
+  min_idle_instances: 0
+  max_idle_instances: 1
+  min_pending_latency: 5s
+  max_pending_latency: 10s
+  max_concurrent_requests: 50
 
 libraries:
 - name: numpy
