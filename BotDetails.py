@@ -263,9 +263,9 @@ class BotDetails(webapp.RequestHandler):
                 
                 enemyScores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
                 
-                #def pngString(arr)
-                size = 219
-                a = numpy.empty((size+1,size+1,4))
+
+                size = 230
+                a = numpy.empty((size+1,size+1,4), dtype=numpy.float32)
                 a[...,(0,1,2)]=255
                 a[size - int(round(.5*size)),...,(0,1,2)] = 127
                 for b in bots:
@@ -274,7 +274,7 @@ class BotDetails(webapp.RequestHandler):
                         a[max(0,min(size,size-int(round(b.APS*0.01*size)))),
                           int(round(eScore.APS*0.01*size)),(0)]=0
                         a[max(0,min(size,size-int(round(b.Survival*0.01*size)))),
-                          int(round(eScore.Survival*0.01*size)),(1)]=0
+                          int(round(eScore.APS*0.01*size)),(1)]=0
                         
                         a[max(0,min(size,size-int(round((b.KNNPBI+50)*0.01*size)))),
                           int(round(eScore.APS*0.01*size)),(2)]=0
@@ -295,7 +295,7 @@ class BotDetails(webapp.RequestHandler):
                 e = base64.b64encode(d).decode("ascii")
                 out.append('<img title=\"Red = APS, Green = Survival, Blue = APS vs (KNNPBI+50)\" style=\"border: black 1px solid;\" alt="score distibution" src="data:image/png;base64,')
                 out.append(e)
-                out.append("\">")#<br>Opponent APS vs. Pairing APS")
+                out.append("\">")
                 
                 out.append("</td></tr>")
                 out.append("<tr>\n<th>APS</th>\n<td>\n" + str(bot.APS) + "</td></tr>")
@@ -312,7 +312,7 @@ class BotDetails(webapp.RequestHandler):
                 out.append("<input type=\"hidden\" name=\"bota\" value=\"" + name + "\" />")
                 out.append("<input type=\"text\" name=\"botb\" value=\"" + name + "\" />")
                 out.append("<input type=\"submit\" value=\"Compare\" /></form>")
-                out.append("</td><td>Opponent (X) vs. Pairing (Y) </td></tr></table>")
+                out.append("</td><td>Opponent APS (X) vs. Pairing (Y) </td></tr></table>")
                 
                 if lim > 0:
                     out.append("\n<table>\n<tr>\n")

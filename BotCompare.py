@@ -267,7 +267,7 @@ class BotCompare(webapp.RequestHandler):
                 out.append("</td><td rowspan=\"7\">")
                 enemyScores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
                 size = 169
-                a = numpy.empty((size+1,size+1,4))
+                a = numpy.empty((size+1,size+1,4), dtype=numpy.float32)
                 a[...,(0,1,2)]=255
                 for cp in commonList:
                     eScore = enemyScores.get(cp.Name,None)
@@ -276,7 +276,7 @@ class BotCompare(webapp.RequestHandler):
                           int(round(eScore.APS*0.01*size)),(0)]=0
                         
                         a[max(0,min(size,size-int(round((cp.A_Survival - cp.B_Survival + 50)*0.01*size)))),
-                          int(round(eScore.Survival*0.01*size)),(2)]=0
+                          int(round(eScore.APS*0.01*size)),(1)]=0
 #                        if eScore.ANPP > 0 and b.NPP >= 0:
  #                           a[size-int(round(b.NPP*0.01*size)),int(round(eScore.ANPP*0.01*size)),(0,1)]=0
                 
@@ -292,7 +292,7 @@ class BotCompare(webapp.RequestHandler):
                 d = c.getvalue()
                 c.close()
                 e = base64.b64encode(d).decode("ascii")
-                out.append('<img title=\"Red = APS Diff, Blue = Survival Diff" style=\"border: black 1px solid;\" alt="score distibution" src="data:image/png;base64,')
+                out.append('<img title=\"Red = APS Diff, Green = Survival Diff" style=\"border: black 1px solid;\" alt="score distibution" src="data:image/png;base64,')
                 out.append(e)
                 out.append("\">")#<br>Opponent APS vs. Pairing APS")
                                 
