@@ -17,11 +17,11 @@ from google.appengine.api import memcache
 from operator import attrgetter
 import structures
 import zlib
-from structures import global_dict
+#from structures import global_dict
 class Rankings(webapp.RequestHandler):
     def get(self):
-        global global_dict
-        #global_dict = {}
+        #global global_dict
+        global_dict = {}
         starttime = time.time()
         query = self.request.query_string
         query = query.replace("%20"," ")
@@ -62,33 +62,33 @@ class Rankings(webapp.RequestHandler):
             order = "VoteScore"
             
         parsing = time.time() - starttime
-        rumble = global_dict.get(game,None)
+        #rumble = global_dict.get(game,None)
+        #if rumble is None:
+        rumble = memcache.get(game)
         if rumble is None:
-            rumble = memcache.get(game)
+            rumble = structures.Rumble.get_by_key_name(game)
             if rumble is None:
-                rumble = structures.Rumble.get_by_key_name(game)
-                if rumble is None:
-                    self.response.out.write("RUMBLE NOT FOUND")
-                    return
-                else:
-                    global_dict[game]=rumble
-                    memcache.set(game,rumble)
+                self.response.out.write("RUMBLE NOT FOUND")
+                return
             else:
-                global_dict[game] = rumble
+                #global_dict[game]=rumble
+                memcache.set(game,rumble)
+        #else:
+            #global_dict[game] = rumble
         
-        flagmap = global_dict.get(structures.default_flag_map,None)
+        #flagmap = global_dict.get(structures.default_flag_map,None)
+        #if flagmap is None:
+        flagmap = memcache.get(structures.default_flag_map)
         if flagmap is None:
-            flagmap = memcache.get(structures.default_flag_map)
-            if flagmap is None:
-                flagmapholder = structures.FlagMap.get_by_key_name(structures.default_flag_map)
-                if flagmapholder is None:
-                    flagmap = zlib.compress(marshal.dumps({}))
-                else:
-                    flagmap = flagmapholder.InternalMap
-                    memcache.set(structures.default_flag_map,flagmap)
-                    global_dict[structures.default_flag_map] = flagmap
+            flagmapholder = structures.FlagMap.get_by_key_name(structures.default_flag_map)
+            if flagmapholder is None:
+                flagmap = zlib.compress(marshal.dumps({}))
             else:
-                global_dict[structures.default_flag_map] = flagmap
+                flagmap = flagmapholder.InternalMap
+                memcache.set(structures.default_flag_map,flagmap)
+                #global_dict[structures.default_flag_map] = flagmap
+           # else:
+              #  global_dict[structures.default_flag_map] = flagmap
         
         try:
             flagmap = pickle.loads(zlib.decompress(flagmap))
