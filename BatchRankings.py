@@ -100,10 +100,14 @@ class BatchRankings(webapp.RequestHandler):
                 entries = len(scoresdicts)
                 r.__dict__["entries"] = entries 
             rumbles.sort(key = lambda r: -r.__dict__["entries"])
-    
+            
+            first = True
             for r in rumbles:
-                #gc.collect()            
-                gc.collect(2)               
+                if not first:
+                    time.sleep(5)
+                    gc.collect()            
+                    gc.collect(2)               
+                first = False
                 
                 logging.info("mem usage at start of " + r.Name + ": " + str(runtime.memory_usage().current()) + "MB")
                 try:
@@ -164,10 +168,18 @@ class BatchRankings(webapp.RequestHandler):
                             lostList.append(missingHashes[i])
                             #lost = True
     
-                
+                while len(particHash) > 0:
+                    particHash.pop()    
                 particHash = None
+                
+                while len(missingHashes) > 0:
+                    missingHashes.pop()
                 missingHashes = None
+                
+                while len(missingIndexes) > 0:
+                    missingIndexes.pop()
                 missingIndexes = None
+                
                 logging.info("mem usage after loading bots: " + str(runtime.memory_usage().current()) + "MB")     
     
                 bots = filter(lambda b: b is not None, bots)
@@ -374,7 +386,7 @@ class BatchRankings(webapp.RequestHandler):
                     
                     for d in splitlist:
                         rpcList.append(client.set_multi_async(d))
-                        time.sleep(1) #throttle
+                        time.sleep(.5) #throttle
                     
                     logging.info("wrote " + str(len(botsdict)) + " bots to memcache")
 
@@ -405,6 +417,9 @@ class BatchRankings(webapp.RequestHandler):
                         db.put(subset)
                         time.sleep(0.1)#throttle
                     logging.info("wrote " + str(len(writebots)) + " bots to database")
+                
+                while len(bots) > 0:
+                    bots.pop()
                 bots = None
                 
                 if minwrite:
@@ -418,6 +433,9 @@ class BatchRankings(webapp.RequestHandler):
                         db.put(subset)
                         time.sleep(0.1)
                     logging.info("wrote " + str(len(writebots)) + " changed bots to database")
+                
+                while len(changedBots) > 0:
+                    changedBots.pop()
                 changedBots = None
                 gc.collect()
                 
