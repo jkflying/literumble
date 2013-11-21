@@ -89,7 +89,8 @@ class UploadedResults(webapp.RequestHandler):
             and rumble is not None 
             and bota is not None 
             and botb is not None):
-            
+            #prio_q = taskqueue.Queue("priority-battles")
+            #prio_task_list_rpc = prio_q.lease_tasks_by_tag_async(30,1,rumble)
             try:
                 taskqueue.add(url='/HandleQueuedResults', payload=json.dumps(results))
                 bota_name = bota.split(" ")[0].split(".")[-1]
@@ -107,11 +108,19 @@ class UploadedResults(webapp.RequestHandler):
                 botb_name = botb.split(" ")[0].split(".")[-1]                
                 self.response.out.write("OK. Task queue error," + bota_name + " vs " + botb_name + " discarded.")
 
+            
+#            prio_task_list = prio_task_list_rpc.get_result()
+#            if prio_task_list:
+#                prio_string = prio_task_list[0].payload
+#                self.response.out.write(prio_string)   
+#                logging.info("sending back priority battle: " + prio_string + ", " + rumble)
+#                prio_q.delete_tasks(prio_task_list)
             rq_name = rumble + "|queue"
             try:
                 rumble_queue = global_dict[rq_name]
                 try:
                     prio_string = rumble_queue.get_nowait()
+                    logging.info("sending back priority battle: " + prio_string + ", " + rumble)
                     self.response.out.write(prio_string)
                     #logging.info("Sent back priority battles: " + prio_string)
                 except Queue.Empty:

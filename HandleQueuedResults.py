@@ -43,6 +43,7 @@ def rreplace(s, old, new, occurrence):
 class HandleQueuedResults(webapp.RequestHandler):
     def post(self):
         global global_dict
+        #global_dict = {}
         global global_sync
         global locks
         global last_write
@@ -329,7 +330,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                     b.PL = pl
                     b.Battles = battles
                     
-                b.PairingsList = zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),1)
+                b.PairingsList = db.Blob(zlib.compress(pickle.dumps(pairings,pickle.HIGHEST_PROTOCOL),1))
                 b.LastUpload = apair.LastUpload
                 b.Pairings = alivePairings
                 
@@ -466,7 +467,7 @@ class HandleQueuedResults(webapp.RequestHandler):
             infodict = {rumble:game}  #,syncname:zlib.compress(json.dumps(sync),1)}
             botsDict.update(infodict)
                                 
-            global_dict.update(infodict)    
+            #global_dict.update(infodict)    
             for b in bots:
                 key = None
                 if isinstance(b,structures.BotEntry):
@@ -505,7 +506,19 @@ class HandleQueuedResults(webapp.RequestHandler):
                 priopairs = pairingsarray[1]
             elif not all([b.Pairings == maxPairs for b in scoreVals if b.Active]) :
                 possBots = filter(lambda b: b.Pairings != maxPairs and b.Active,scoreVals)
-                priobot = random.choice(possBots)
+                total = 0
+                weighted = [(abs(maxPairs - b.Pairings),b) for b in possBots]
+                for t in weighted:
+                    total += t[0]
+                running = 0
+                point = random.randint(0,total-1)
+                for t in weighted:
+                    running += t[0]
+                    if running > point:
+                        priobot = t[1]
+                        break
+                        
+                #priobot = random.choice(possBots)
                 priobot2 = random.choice(scoreVals).Name
                 catch = 10
                 while priobot2 == priobot.Name and catch > 0:
@@ -513,6 +526,9 @@ class HandleQueuedResults(webapp.RequestHandler):
                     catch -= 1
                 if catch == 0:
                     priobot2 = None
+                    logging.info("repeatedly found same bot for prio")
+                else:
+                    logging.info("global min search successful for non-paired bot")
             else:
                 minBattles = 1.1*min([b.Battles for b in scoreVals if b.Active])
                 possBots = filter(lambda b: b.Battles <= minBattles and b.Active, scoreVals )
@@ -527,12 +543,16 @@ class HandleQueuedResults(webapp.RequestHandler):
                         catch -= 1
                     if catch == 0:
                         priobot2 = None
+                        logging.info("repeatedly found same bot for prio")
+                    else:
+                        logging.info("global min search successful for low-battled bot")
                 elif bots[0].Battles <= bots[1].Battles:
                     priobot = bots[0]
                     priopairs = pairingsarray[0]
                 else:
                     priobot = bots[1]
                     priopairs = pairingsarray[1]
+                
             
            # prioPack = [s for s in scores if s.Pairings < len(scores)-1 ]  
            # if len(prioPack) > 0:
@@ -558,17 +578,23 @@ class HandleQueuedResults(webapp.RequestHandler):
                     if len(possPairs) > 0:
                         #choose a random new pairing to prevent overlap
                         priobot2 = random.choice(possPairs)
+                        logging.info("successful local search for new pair")
+                    else:
+                        logging.info("unsuccessful local search for new pair")
 
                             
                                 
                 else:
                     #sort for lowest battled pairing
                     #priopairs = sorted(priopairs, key = lambda score: score.Battles)
-                    minbat = min([p.Battles for p in priopairs])
+                    minbat = min([p.Battles for p in priopairs if p.Name in scores and scores[p.Name].Active])
                     possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active,priopairs)
                     if len( possPairs) > 0:
                         priobot2 = random.choice(possPairs).Name
+                        logging.info("successful local search for low-battled pair")
                         #choose low battles, but still random - prevents lots of duplicates
+                    else:
+                        logging.info("unsuccessful local search for low-battled pair")
                     
                     
             if priobot is not None and priobot2 is not None:    
@@ -577,6 +603,9 @@ class HandleQueuedResults(webapp.RequestHandler):
                 
                 prio_string = "[" + string.join(priobots,",") + "]\n"
                 #prio_string = "\nOK. A priority battle got sent back!"
+                #q = taskqueue.Queue("priority-battles")
+                #q.add(taskqueue.Task(payload=prio_string,method="PULL",tag=rumble))
+                logging.info("adding priority battle: " + prio_string + ", " + rumble)
                 
                 rq_name = rumble + "|queue"
                 try:
@@ -590,8 +619,16 @@ class HandleQueuedResults(webapp.RequestHandler):
                 except KeyError:
                     logging.info("No queue for rumble " + rumble + ", adding one!")
                     global_dict[rq_name] = Queue.Queue(maxsize=300)
-        
-        
+                    rumble_queue = global_dict[rq_name]
+                    rumble_queue.put_nowait(prio_string)
+            else:
+                logging.info("no suitable priority battle found in " + rumble)
+                if priobot is None:
+                    logging.info("priobot is None")
+                else:
+                    logging.info("priobot2 is None")
+        else:
+            logging.info("no priority battle attempted for " + rumble)
        # priotime = time.time() - puttime - scorestime - retrievetime - starttime
         
         self.response.out.write("\nOK. " + bota + " vs " + botb + " received")
