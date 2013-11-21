@@ -58,15 +58,15 @@ class RatingsFile(webapp.RequestHandler):
             else:
                 global_dict[game] = rumble
         
-        try:
-            scoresdicts = marshal.loads(zlib.decompress(rumble.ParticipantsScores))
-            scoreslist = [structures.LiteBot() for _ in scoresdicts]
-            for s,d in zip(scoreslist,scoresdicts):
-                s.__dict__.update(d)
-            r = scoreslist
-        except:
-            botsdict = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
-            r = botsdict.values()     
+#        try:
+#            scoresdicts = marshal.loads(zlib.decompress(rumble.ParticipantsScores))
+#            scoreslist = [structures.LiteBot() for _ in scoresdicts]
+#            for s,d in zip(scoreslist,scoresdicts):
+#                s.__dict__.update(d)
+#            r = scoreslist
+#        except:
+        botsdict = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+        r = botsdict.values()     
                 
             
         out = []
