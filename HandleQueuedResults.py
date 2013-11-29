@@ -378,7 +378,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                     botsync[key] = botsync.get(key,0) + 1
 
             minSize = min(60,len(scores)/2)
-            
+            wrote = False
 
                         
             if len(botsync) > minSize and not write_lock.locked():# and time.time() > last_write_time + 20:
@@ -429,6 +429,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                                 s = b.key().name()
                                 botsync.pop(s,1)
                                 syncbotsDict.pop(s,1)
+                            wrote = True
                             
                         except Exception, e:
                             logging.error('Failed to write data: '+ str(e))
@@ -450,30 +451,20 @@ class HandleQueuedResults(webapp.RequestHandler):
                 game.BatchScoresAccurate = False
                 if not newBot:
                     game.put()
-            if newBot:
+                    wrote = True
+                    
+            if newBot or wrote:
                 game.put()
                 #db.put(bots)
                 memcache.delete("home")
             
-            botsDict = {}
+            botsDict = {rumble:game} 
+            global_dict[rumble] = game
             for b in bots:
-                key = None
                 if isinstance(b,structures.BotEntry):
-                    key = b.key().name()
-                else:
-                    key = b.key_name
-                botsDict[key] = b
-                
-            infodict = {rumble:game}  #,syncname:zlib.compress(json.dumps(sync),1)}
-            botsDict.update(infodict)
-                                
-            #global_dict.update(infodict)    
-            for b in bots:
-                key = None
-                if isinstance(b,structures.BotEntry):
-                    key = b.key().name()
-                else:
-                    key = b.key_name
+                    b = structures.CachedBotEntry(b)
+                    
+                key = b.key_name
                 botsDict[key] = b
             memcache.set_multi(botsDict)
 
