@@ -18,12 +18,12 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 
 import structures
-#from structures import global_dict
+from structures import global_dict
         
 class RatingsFile(webapp.RequestHandler):
     def get(self):
-        #global global_dict
-        global_dict = {}
+        global global_dict
+        #global_dict = {}
         
         #starttime = time.time()
         parts = self.request.query_string.split("&")
