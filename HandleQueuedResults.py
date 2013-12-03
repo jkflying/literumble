@@ -509,17 +509,22 @@ class HandleQueuedResults(webapp.RequestHandler):
                         priobot = t[1]
                         break
                         
-                #priobot = random.choice(possBots)
-                priobot2 = random.choice(scoreVals).Name
-                catch = 10
-                while priobot2 == priobot.Name and catch > 0:
-                    priobot2 = random.choice(scoreVals).Name
-                    catch -= 1
-                if catch == 0:
-                    priobot2 = None
-                    logging.info("repeatedly found same bot for prio")
+                bhash = priobot.Name + "|" + rumble
+                fullPrioBot = memcache.get(bhash)
+                if fullPrioBot:
+                    priopairs = pickle.loads(zlib.decompress(fullPrioBot.PairingsList))
+                    logging.info("memcache lookup shortcut to local search")
                 else:
-                    logging.info("global min search successful for non-paired bot")
+                    priobot2 = random.choice(scoreVals).Name
+                    catch = 10
+                    while priobot2 == priobot.Name and catch > 0:
+                        priobot2 = random.choice(scoreVals).Name
+                        catch -= 1
+                    if catch == 0:
+                        priobot2 = None
+                        logging.info("repeatedly found same bot for prio")
+                    else:
+                        logging.info("global min search successful for non-paired bot")
             else:
                 minBattles = 1.1*min([b.Battles for b in scoreVals if b.Active])
                 possBots = filter(lambda b: b.Battles <= minBattles and b.Active, scoreVals )
