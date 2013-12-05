@@ -532,16 +532,24 @@ class HandleQueuedResults(webapp.RequestHandler):
                 names = [b.Name for b in possBots]
                 if bots[1].Name not in names and bots[0].Name not in names:
                     priobot = random.choice(possBots)
-                    priobot2 = random.choice(scoreVals).Name
-                    catch = 10
-                    while priobot2 == priobot.Name and catch > 0:
-                        priobot2 = random.choice(scoreVals).Name
-                        catch -= 1
-                    if catch == 0:
-                        priobot2 = None
-                        logging.info("repeatedly found same bot for prio")
+                    
+                    bhash = priobot.Name + "|" + rumble
+                    fullPrioBot = memcache.get(bhash)
+                    if fullPrioBot:
+                        priopairs = pickle.loads(zlib.decompress(fullPrioBot.PairingsList))
+                        logging.info("memcache lookup shortcut to global search")
                     else:
-                        logging.info("global min search successful for low-battled bot")
+                        priobot2 = random.choice(scoreVals).Name
+                        catch = 10
+                        while priobot2 == priobot.Name and catch > 0:
+                            priobot2 = random.choice(scoreVals).Name
+                            catch -= 1
+                        if catch == 0:
+                            priobot2 = None
+                            logging.info("repeatedly found same bot for prio")
+                        else:
+                            logging.info("global min search successful for low-battled bot")
+                            
                 elif bots[0].Battles <= bots[1].Battles:
                     priobot = bots[0]
                     priopairs = pairingsarray[0]
