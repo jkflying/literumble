@@ -471,7 +471,8 @@ class HandleQueuedResults(webapp.RequestHandler):
         
        # puttime = time.time() - scorestime - retrievetime - starttime
         scoreVals = scores.values()
-        maxPairs = len(scoreVals) - 1           
+        maxPairs = len([val for val in scoreVals if val.Active]) - 1 
+          
         if game.PriorityBattles and ((not game.Melee) or 
         (random.random() < 0.0222 
         or bots[0].Pairings != maxPairs or bots[1].Pairings != maxPairs
@@ -486,19 +487,20 @@ class HandleQueuedResults(webapp.RequestHandler):
             priobot = None
             priopairs = None
             
-            # this just does a gradient descent... let's do a direct search since we alread have the data
-
+            #let's do a direct search since we already have the data
+            #First look for bots missing pairings
+            missingPairings = filter(lambda b: b.Pairings != maxPairs and b.Active,scoreVals)
+            missingPairingsNames = [b.Name for b in missingPairings]
+            
             priobot2 = None                                
-            if bots[0].Pairings != maxPairs:
-                priobot = bots[0]
-                priopairs = pairingsarray[0]
-            elif bots[1].Pairings != maxPairs:
-                priobot = bots[1]
-                priopairs = pairingsarray[1]
-            elif not all([b.Pairings == maxPairs for b in scoreVals if b.Active]) :
-                possBots = filter(lambda b: b.Pairings != maxPairs and b.Active,scoreVals)
+
+            if len(missingPairings) > 0:
+                
                 total = 0
-                weighted = [(abs(maxPairs - b.Pairings),b) for b in possBots]
+                #weight bots based on how different they are from desired pairings
+                weighted = [(abs(maxPairs - b.Pairings),b) for b in missingPairings]
+
+                #select them for battles according to that weight
                 for t in weighted:
                     total += t[0]
                 running = 0
@@ -508,23 +510,36 @@ class HandleQueuedResults(webapp.RequestHandler):
                     if running > point:
                         priobot = t[1]
                         break
-                        
-                bhash = priobot.Name + "|" + rumble
-                fullPrioBot = memcache.get(bhash)
-                if fullPrioBot:
-                    priopairs = pickle.loads(zlib.decompress(fullPrioBot.PairingsList))
-                    logging.info("memcache lookup shortcut to local search")
+                #check if we have the selected bot already loaded
+                if priobot.Name == bots[0].Name:
+                    priobot = bots[0]
+                    priopairs = pairingsarray[0]
+                elif priobot.Name == bots[1].Name:
+                    priobot = bots[1]
+                    priopairs = pairingsarray[1]
                 else:
-                    priobot2 = random.choice(scoreVals).Name
-                    catch = 10
-                    while priobot2 == priobot.Name and catch > 0:
-                        priobot2 = random.choice(scoreVals).Name
-                        catch -= 1
-                    if catch == 0:
-                        priobot2 = None
-                        logging.info("repeatedly found same bot for prio")
+                    #if not try to load them from memcache, but only if we need a special battle
+                    if priobot.Pairings < maxPairs:
+                        bhash = priobot.Name + "|" + rumble
+                        fullPrioBot = memcache.get(bhash)
                     else:
-                        logging.info("global min search successful for non-paired bot")
+                        fullPrioBot = None
+                        
+                    if fullPrioBot:
+                        priopairs = pickle.loads(zlib.decompress(fullPrioBot.PairingsList))
+                        logging.info("memcache lookup shortcut to local search")
+                    else:
+                        #if they aren't in memcache give them a generic battle
+                        priobot2 = random.choice(scoreVals).Name
+                        catch = 10
+                        while priobot2 == priobot.Name and catch > 0:
+                            priobot2 = random.choice(scoreVals).Name
+                            catch -= 1
+                        if catch == 0:
+                            priobot2 = None
+                            logging.info("repeatedly found same bot for prio")
+                        else:
+                            logging.info("global min search successful for non-paired bot")
             else:
                 minBattles = 1.1*min([b.Battles for b in scoreVals if b.Active])
                 possBots = filter(lambda b: b.Battles <= minBattles and b.Active, scoreVals )
@@ -565,7 +580,7 @@ class HandleQueuedResults(webapp.RequestHandler):
             
             
             if priobot2 is None and priopairs is not None:
-                if priobot.Pairings < len(scores) - 1:
+                if priobot.Pairings < maxPairs:
                     #create the first battle of a new pairing
                     
                     #cache pairings into dictionary to speed lookups against entire rumble
@@ -591,8 +606,11 @@ class HandleQueuedResults(webapp.RequestHandler):
                 else:
                     #sort for lowest battled pairing
                     #priopairs = sorted(priopairs, key = lambda score: score.Battles)
+                    
                     minbat = min([p.Battles for p in priopairs if p.Name in scores and scores[p.Name].Active])
-                    possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active,priopairs)
+                    possPairs =filter(lambda p: p.Battles <= minbat and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active,priopairs)
+                    if len(possPairs) < min(50,0.5*len(scores)):
+                        possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active,priopairs)
                     if len( possPairs) > 0:
                         priobot2 = random.choice(possPairs).Name
                         logging.info("successful local search for low-battled pair")

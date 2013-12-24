@@ -68,15 +68,15 @@ class UploadedResults(webapp.RequestHandler):
             tqs_r = tq.fetch_statistics_async()
             tqs = tqs_r.get_result()
             last_min = tqs.executed_last_minute
-            if last_min is None or last_min <= 50:
-                last_min = 50
+            if last_min is None or last_min <= 120:
+                last_min = 120
             tasks = tqs.tasks
             if tasks is None:
                 tasks is 0
             backlog = float(tasks)/last_min
-            uploads_allowed = backlog < 20
+            uploads_allowed = backlog < 5
             global_dict["uploads allowed"]=uploads_allowed
-            global_dict["uploads allowed check time"] = datetime.datetime.now() + datetime.timedelta(1./(24*6))
+            global_dict["uploads allowed check time"] = datetime.datetime.now() + datetime.timedelta(1./(24*60))
         if not uploads_allowed:
             bota_name = bota.split(" ")[0].split(".")[-1]
             botb_name = botb.split(" ")[0].split(".")[-1]
