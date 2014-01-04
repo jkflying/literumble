@@ -471,7 +471,7 @@ class HandleQueuedResults(webapp.RequestHandler):
         
        # puttime = time.time() - scorestime - retrievetime - starttime
         scoreVals = scores.values()
-        maxPairs = len([val for val in scoreVals if val.Active]) - 1 
+        maxPairs = len(scoreVals) - 1 
           
         if game.PriorityBattles and ((not game.Melee) or 
         (random.random() < 0.0222 
@@ -487,11 +487,13 @@ class HandleQueuedResults(webapp.RequestHandler):
             priobot = None
             priopairs = None
             
+            logging.debug("Maxpairs: " + str(maxPairs))
+            
             #let's do a direct search since we already have the data
             #First look for bots missing pairings
-            missingPairings = filter(lambda b: b.Pairings != maxPairs and b.Active,scoreVals)
+            missingPairings = filter(lambda b: b.Pairings != maxPairs,scoreVals)
             missingPairingsNames = [b.Name for b in missingPairings]
-            
+            logging.debug("missingPairings: " + str(len(missingPairings)))
             priobot2 = None                                
 
             if len(missingPairings) > 0:
@@ -540,6 +542,27 @@ class HandleQueuedResults(webapp.RequestHandler):
                             logging.info("repeatedly found same bot for prio")
                         else:
                             logging.info("global min search successful for non-paired bot")
+                
+                if priobot != None:
+                    #create the first battle of a new pairing
+                    
+                    #cache pairings into dictionary to speed lookups against entire rumble
+                    pairsdict = {}
+                    for b in priopairs:
+                        pairsdict[b.Name] = b
+                    
+                    #select all unpaired bots
+                    possPairs = []
+                    for p in scores:
+                        if p not in pairsdict and p != priobot.Name:
+                            possPairs.append(p)
+                            
+                    if len(possPairs) > 0:
+                        #choose a random new pairing to prevent overlap
+                        priobot2 = random.choice(possPairs)
+                        logging.info("successful local search for new pair")
+                    else:
+                        logging.info("unsuccessful local search for new pair")
             else:
                 minBattles = 1.1*min([b.Battles for b in scoreVals if b.Active])
                 possBots = filter(lambda b: b.Battles <= minBattles and b.Active, scoreVals )
@@ -571,52 +594,23 @@ class HandleQueuedResults(webapp.RequestHandler):
                 else:
                     priobot = bots[1]
                     priopairs = pairingsarray[1]
-                
-            
-           # prioPack = [s for s in scores if s.Pairings < len(scores)-1 ]  
-           # if len(prioPack) > 0:
-                
-            
             
             
             if priobot2 is None and priopairs is not None:
-                if priobot.Pairings < maxPairs:
-                    #create the first battle of a new pairing
-                    
-                    #cache pairings into dictionary to speed lookups against entire rumble
-                    pairsdict = {}
-                    for b in priopairs:
-                        pairsdict[b.Name] = b
-                    
-                    #select all unpaired bots
-                    possPairs = []
-                    for p in scores:
-                        if p not in pairsdict and p != priobot.Name and scores[p].Active:
-                            possPairs.append(p)
-                            
-                    if len(possPairs) > 0:
-                        #choose a random new pairing to prevent overlap
-                        priobot2 = random.choice(possPairs)
-                        logging.info("successful local search for new pair")
-                    else:
-                        logging.info("unsuccessful local search for new pair")
 
-                            
-                                
+                #sort for lowest battled pairing
+                #priopairs = sorted(priopairs, key = lambda score: score.Battles)
+                
+                minbat = min([p.Battles for p in priopairs if p.Name in scores and scores[p.Name].Active])
+                possPairs =filter(lambda p: p.Battles <= minbat and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active,priopairs)
+                if len(possPairs) < min(50,0.5*len(scores)):
+                    possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active,priopairs)
+                if len( possPairs) > 0:
+                    priobot2 = random.choice(possPairs).Name
+                    logging.info("successful local search for low-battled pair")
+                    #choose low battles, but still random - prevents lots of duplicates
                 else:
-                    #sort for lowest battled pairing
-                    #priopairs = sorted(priopairs, key = lambda score: score.Battles)
-                    
-                    minbat = min([p.Battles for p in priopairs if p.Name in scores and scores[p.Name].Active])
-                    possPairs =filter(lambda p: p.Battles <= minbat and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active,priopairs)
-                    if len(possPairs) < min(50,0.5*len(scores)):
-                        possPairs = filter(lambda p: p.Battles <= minbat + 1 and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active,priopairs)
-                    if len( possPairs) > 0:
-                        priobot2 = random.choice(possPairs).Name
-                        logging.info("successful local search for low-battled pair")
-                        #choose low battles, but still random - prevents lots of duplicates
-                    else:
-                        logging.info("unsuccessful local search for low-battled pair")
+                    logging.info("unsuccessful local search for low-battled pair")
                     
                     
             if priobot is not None and priobot2 is not None:    
