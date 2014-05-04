@@ -28,4 +28,4 @@ libraries:
 module: batchratings
 runtime: python27
 threadsafe: true
-version: 4-4
+version: 4-6

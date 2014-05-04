@@ -13,9 +13,13 @@ import structures
 import pickle
 import zlib
 
-for game in ["meleerumble","minimeleerumble","micromeleerumble","nanomeleerumble"]:
-    #game = "nanomeleerumble"
-    rumble = structures.Rumble.get_by_key_name(game)
+for game in ["meleerumble","minimeleerumble","micromeleerumble","nanomeleerumble",
+             "roborumble","minirumble","microrumble","nanorumble","gigarumble",
+             "teamrumble",
+             "twinduel",
+             ]:
+    #rumble = structures.Rumble.get_by_key_name(game)
+    rumble = None
     botsdict = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
     bots = botsdict.values()
     keys = [db.Key.from_path('BotEntry',b.Name + "|" + game) for b in bots]

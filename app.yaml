@@ -1,5 +1,5 @@
 application: literumble
-version: 4-4
+version: 4-6
 runtime: python27
 threadsafe: yes
 api_version: 1
@@ -19,8 +19,8 @@ libraries:
 - name: PIL
   version: "latest"
 
-#builtins:
-#- remote_api: on
+builtins:
+- remote_api: on
 #- appstats: on
 
 error_handlers:
