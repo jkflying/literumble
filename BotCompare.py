@@ -294,10 +294,13 @@ class BotCompare(webapp.RequestHandler):
 #                        if eScore.ANPP > 0 and b.NPP >= 0:
  #                           a[size-int(round(b.NPP*0.01*size)),int(round(eScore.ANPP*0.01*size)),(0,1)]=0
                 a[counts==0,:] = 255
-                setVals = counts>0
+                setVals = counts>1
                 for i in range(3):
                     a[setVals,i] = a[setVals,i]/counts[setVals]
-                a[size - int(round(.5*size)),...] = 127
+
+                midHeight = size - int(round(.5*size))
+                a[midHeight,counts[midHeight,:] == 0,:] = 127
+                
                 b = Image.fromarray(a.astype("uint8"),"RGB")
                 c = cStringIO.StringIO()
                 b.save(c,format="png")

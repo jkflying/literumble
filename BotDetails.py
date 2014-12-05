@@ -263,31 +263,46 @@ class BotDetails(webapp.RequestHandler):
                 
                 enemyScores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
                 
-
+                 # RGB color model
+                # Default colors
+                # colorSurvival = (0,255,0)
+                # colorAPS = (255,0,0)
+                # colorAPSvsKNPBI = (0,0,255)
+                # Colors suggested at 
+                # http://ksrowell.com/blog-visualizing-data/2012/02/02/optimal-colors-for-graphs/
+                colorSurvival = (62,150,81)
+                colorAPS = (204,37,41)
+                colorKNPBI = (57,106,177)
+                
                 size = 230
-                a = numpy.empty((size+1,size+1,4), dtype=numpy.float32)
-                a[...,(0,1,2)]=255
-                a[size - int(round(.5*size)),...,(0,1,2)] = 127
+                a = numpy.zeros((size+1,size+1,3), dtype=numpy.uint32)
+                counts = numpy.zeros((size+1, size+1), dtype=numpy.uint32)
+                
+
                 for b in bots:
                     eScore = enemyScores.get(b.Name,None)
                     if eScore:
-                        a[max(0,min(size,size-int(round(b.APS*0.01*size)))),
-                          int(round(eScore.APS*0.01*size)),(0)]=0
-                        a[max(0,min(size,size-int(round(b.Survival*0.01*size)))),
-                          int(round(eScore.APS*0.01*size)),(1)]=0
+                        x = int(round(eScore.APS*0.01*size))
+                        yAPS = max(0,min(size,size-int(round(b.APS*0.01*size))))
+                        a[yAPS, x, :] += colorAPS
+                        counts[yAPS,x] += 1
                         
-                        a[max(0,min(size,size-int(round((b.KNNPBI+50)*0.01*size)))),
-                          int(round(eScore.APS*0.01*size)),(2)]=0
-#                        if eScore.ANPP > 0 and b.NPP >= 0:
- #                           a[size-int(round(b.NPP*0.01*size)),int(round(eScore.ANPP*0.01*size)),(0,1)]=0
+                        ySurvival = max(0,min(size,size-int(round(b.Survival*0.01*size))))
+                        a[ySurvival, x, :] += colorSurvival
+                        counts[ySurvival,x] += 1
+                        
+                        yKNNPBI = max(0,min(size,size-int(round((b.KNNPBI+50)*0.01*size))))
+                        a[yKNNPBI, x, :] += colorKNPBI
+                        counts[yKNNPBI,x] += 1
                 
-                b = Image.fromarray(a.astype("uint8"), "CMYK")
+                a[counts==0,:] = 255
+                setVals = counts>1
+                for i in range(3):
+                    a[setVals,i] = a[setVals,i]/counts[setVals]
+                midHeight = size - int(round(.5*size))
+                a[midHeight,counts[midHeight,:] == 0,:] = 127
                 
-                b = b.convert("RGB")
-                a = numpy.array(b)
-                a[(a == (0,0,0)).all(axis=2)] = (255,255,255)
-                
-                b = Image.fromarray(a,"RGB")
+                b = Image.fromarray(a.astype("uint8"),"RGB")
                 c = cStringIO.StringIO()
                 b.save(c,format="png")
                 d = c.getvalue()
