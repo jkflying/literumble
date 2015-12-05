@@ -260,6 +260,12 @@ class HandleQueuedResults(webapp.RequestHandler):
         
                         
         aBattles = apair.Battles
+        
+        #rolling average with a half-life of 10k
+        maxPerPair = 10000 / len(bots)
+        if aBattles > maxPerPair:
+            aBattles = maxPerPair
+        
         #bBattles = bpair.Battles
         
         inv_ab = 1.0/(aBattles + 1.0)    
