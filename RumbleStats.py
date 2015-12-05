@@ -87,7 +87,7 @@ class RumbleStats(webapp.RequestHandler):
             out = []
             out.append(structures.html_header % ("Statistics","LiteRumble Statistics"))
             out.append("\nStats generated: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC")
-            out.append("\nAllowed Robocode versions: " + str(structures.allowed_clients) + "\n<br>\n")
+            out.append("\nAllowed Robocode versions: " + ", ".join(structures.allowed_clients) + "\n<br><br>\n")
             q = structures.Rumble.all()
             rumbles = [[],[],[]]
             categories = ["1v1","Melee","Teams"]
@@ -138,8 +138,6 @@ class RumbleStats(webapp.RequestHandler):
                     game = r.Name
                     gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\" ><b>" + game + "</b></a>"
                     
-
-                        
                     lastTimeSince = timeSince(r.LastUpload) + " ago"
                     out.append( "\n<tr>\n<td>" + gameHref + "</td>\n<th>" + str(r.__dict__["entries"]) + "</th>\n<th>")
                     out.append(str(r.TotalUploads) + "</th><th>"+lastTimeSince+"</th>\n</tr>")
@@ -149,7 +147,6 @@ class RumbleStats(webapp.RequestHandler):
                             uploaders = {}
                     except TypeError:
                         uploaders = {}
-
                     
                     #out.append("\n<tr><td></td><td><i><u>Uploader Name</u></i></td><td></td><td></td></tr>")
                     uv = uploaders.values()
