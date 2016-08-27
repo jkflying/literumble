@@ -157,7 +157,7 @@ allowed_flags = set(['ABW', 'AFG', 'AGO', 'AIA', 'ALA', 'ALB', 'AND', 'ARE',
                      'CZE', 'DEU', 'ESP', 'FIN', 'FRA', 'GBR', 'GRC', 'HUN', 
                      'IRL', 'ITA', 'JPN', 'KOR', 'LTU', 'LVA', 'MAN', 'NLD', 
                      'NOR', 'NZL', 'POL', 'PRT', 'RUS', 'SGP', 'SRB', 'SWE', 
-                     'SVK', 'THA', 'USA', 'VEN', 'WIKI', 'ZAF'])
+                     'SVK', 'THA', 'TUR', 'USA', 'VEN', 'WIKI', 'ZAF'])
 
 class FlagMap(db.Model):
     #key_name is ALWAYS FLAGMAP
