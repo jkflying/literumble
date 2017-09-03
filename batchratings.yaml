@@ -1,5 +1,4 @@
 api_version: '1'
-application: literumble
 basic_scaling:
   max_instances: '1'
   idle_timeout: 5m
@@ -28,4 +27,3 @@ libraries:
 module: batchratings
 runtime: python27
 threadsafe: true
-version: 4-7
