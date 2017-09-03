@@ -19,11 +19,20 @@ from google.appengine.ext import webapp
 from google.appengine.api import memcache
 
 import structures
-#from structures import global_dict
 
-def rreplace(s, old, new, occurrence):
-    li = s.rsplit(old, occurrence)
-    return new.join(li)
+def nth_repl(s, sub, repl, nth):
+    find = s.find(sub)
+    # if find is not p1 we have found at least one match for the substring
+    i = find != -1
+    # loop util we find the nth or we find no match
+    while find != -1 and i != nth:
+        # find + 1 means we start at the last match start index + 1
+        find = s.find(sub, find + 1)
+        i += 1
+    # if i  is equal to nth we found nth matches so replace
+    if i == nth:
+        return s[:find]+repl+s[find + len(sub):]
+    return s
 
 class RemoveOldParticipant(webapp.RequestHandler):
     def get(self):
@@ -63,8 +72,6 @@ def removeFromRumble(self,requests):
     while name.count("%20") > 0:
         name = rreplace(name,"%20"," ",1)
         
-    if name.count(" ") == 0:
-        name = rreplace(name,"_"," ",1)
     
     rumble = global_dict.get(game,None)
     if rumble is None:
@@ -72,17 +79,28 @@ def removeFromRumble(self,requests):
         if rumble is None:
             rumble = structures.Rumble.get_by_key_name(game)
 
-    
-    keyhash = name + "|" + game
-    entry = global_dict.get(keyhash,None)
-    if entry is None:
-        entry = memcache.get(keyhash)
-        if entry is None:
-            entry = structures.BotEntry.get_by_key_name(keyhash)
+    if name.count(" ") == 0:
+        num_underscores = name.count("_")
+        error_messages = []
+        for n in range(num_underscores):
+            check_name = nth_repl(name,"_"," ",n+1)
+
+            keyhash = check_name + "|" + game
+            entry = global_dict.get(keyhash,None)
             if entry is None:
-                return "ERROR. name/game does not exist: " + name + "/" + game
-            else:
-                entry = structures.CachedBotEntry(entry)
+                entry = memcache.get(keyhash)
+                if entry is None:
+                    entry = structures.BotEntry.get_by_key_name(keyhash)
+                    if entry is None:
+                        error_messages.append("ERROR. name/game does not exist: " + check_name + "/" + game)
+                    else:
+                        entry = structures.CachedBotEntry(entry)
+
+            if entry is not None:
+                name = check_name
+                break
+        if entry is None:
+            return "\n".join(error_messages)
     
     if isinstance(entry,structures.BotEntry):
         entry = structures.CachedBotEntry(entry)
@@ -105,7 +123,6 @@ def removeFromRumble(self,requests):
         
     scores.pop(name,1)
     rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores,pickle.HIGHEST_PROTOCOL),4)
-    #rumble.ParticipantsScores = zlib.compress(marshal.dumps([scores[s].__dict__ for s in scores]),4)
     
     
     memcache.delete("home")
