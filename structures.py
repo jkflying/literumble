@@ -26,7 +26,7 @@ allowed_versions = ["1"]
 global_dict = {}
 
 class ComparePair:
-    def __init__ (self, bota, botb):
+    def __init__ (self, bota, botb, eScore):
         self.Name = bota.Name
         self.A_APS = bota.APS
         self.B_APS = botb.APS
@@ -38,7 +38,7 @@ class ComparePair:
         self.B_Battles = botb.Battles
         self.A_LastUpload = bota.LastUpload
         self.B_LastUpload = botb.LastUpload
-        
+        self.Opponent_APS = eScore.APS if eScore else float('nan')
 
 class ScoreSet:
     def __init__ (self, name = "", aps = 0.0, min_aps = 100.0, survival = 0.0, battles = 0, lastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):

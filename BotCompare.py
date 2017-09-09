@@ -178,9 +178,7 @@ class BotCompare(webapp.RequestHandler):
                     for s,d in zip(botbbots,botsDicts):
                         s.__dict__.update(d)
                 
-                #retrievetime = time.time() - parsetime - starttime
-                
-                #botabotsDict = {b.Name:b for b in botabots}
+                enemyScores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
                 
                 botabots = filter(lambda b: getattr(b,'Alive',True),botabots)
                 botbbots = filter(lambda b: getattr(b,'Alive',True),botbbots)
@@ -190,13 +188,14 @@ class BotCompare(webapp.RequestHandler):
                 for ba in botabots:
                     if ba.Name in botbbotsDict:
                         bb = botbbotsDict[ba.Name]
+                        eScore = enemyScores.get(ba.Name,None)
                         try:
                             bb.APS = float(bb.APS)
                             ba.APS = float(ba.APS)
                             bb.Survival = float(bb.Survival)
                             ba.Survival = float(ba.Survival)
                             
-                            commonList.append(structures.ComparePair(ba,bb))
+                            commonList.append(structures.ComparePair(ba,bb,eScore))
                         except Exception, e:
                             logging.info(str(e))
                         
@@ -212,15 +211,11 @@ class BotCompare(webapp.RequestHandler):
                     sortOrder = sortOrder[-1] + "_" + sortOrder[0:-2]
                 out = []
                 
-                #out.append("\n\n" + order + "\n\n")
-                #out.append("\n\n" + str(commonList[0].__dict__) + "\n\n")
-                
                 if sortOrder not in commonList[0].__dict__:
                     order = "Name"
                     sortOrder = "Name"
                     
                 commonList = sorted(commonList, key=attrgetter(sortOrder), reverse=reverseSort)
-                #order = order.replace("_"," ")
                 
                 sorttime = time.time() - retrievetime - parsetime - starttime
                 if order == "LastUpload":
@@ -265,7 +260,7 @@ class BotCompare(webapp.RequestHandler):
                 #out.append("<a href=\"BotDetails?game="+game+"&amp;name=" + botbName.replace(" ","%20")+extraArgs+"\">"+botbName+"</a>")
                 
                 out.append("</td><td rowspan=\"7\">")
-                enemyScores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
+                
                 # RGB color model
                 # Default colors
                 # colorSurvival = (0,255,0)
@@ -366,7 +361,7 @@ class BotCompare(webapp.RequestHandler):
                 
                 out.append("\n</table>\n<br>\n<table>\n<tr>")
 
-                out.append("\n<td colspan=\"3\"></td><th colspan=\"2\">" + botaName + "</th><th colspan=\"2\">" + botbName + "</th><td colspan=\"2\">")
+                out.append("\n<td colspan=\"3\"></td><th colspan=\"2\">" + botaName + "</th><th colspan=\"2\">" + botbName + "</th><td colspan=\"3\">")
                 out.append("</td></tr><tr class=\"dim\">")
                 
                 headings = [
@@ -378,7 +373,8 @@ class BotCompare(webapp.RequestHandler):
                 "APS (B)",
                 "Survival (B)",
                 "Diff APS",
-                "Diff Survival"
+                "Diff Survival",
+                "Opponent APS"
                 ]
                 #out.append("\n\n" + order + "\n\n")
                 for heading in headings:
@@ -398,9 +394,9 @@ class BotCompare(webapp.RequestHandler):
                         
                 out.append("\n</tr>")
                 rank = 1
-                highlightKey = [False,False,False,True,True,True,True,True,True]
-                mins = [0,0,0,40,40,40,40,-0.1,-5]
-                maxs = [0,0,0,60,60,60,60, 0.1, 5]
+                highlightKey = [False,False,False,True,True,True,True,True,True,True]
+                mins = [0,0,0,40,40,40,40,-0.1,-5,40]
+                maxs = [0,0,0,60,60,60,60, 0.1, 5,60]
                 for cp in commonList:
                     if rank > lim:
                         break
@@ -417,7 +413,8 @@ class BotCompare(webapp.RequestHandler):
                             round(100.0*cp.B_APS)*0.01,
                             round(100.0*cp.B_Survival)*0.01,
                             round(100.0*cp.Diff_APS)*0.01,
-                            round(100.0*cp.Diff_Survival)*0.01
+                            round(100.0*cp.Diff_Survival)*0.01,
+                            round(100.0*cp.Opponent_APS)*0.01
                             ]
                         
                     out.append("\n<tr>")

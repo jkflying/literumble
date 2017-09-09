@@ -258,7 +258,9 @@ class BotDetails(webapp.RequestHandler):
                 endName = name.split(" ")[0].split(".")[-1]
                 out.append(structures.html_header % (endName + " in " + game,gameTitle))
                 out.append("<table>\n")
-                out.append("<tr>\n<th>Name</th>\n<td>\n" + name + "</td>\n<th>Score Distribution</th></tr>")
+                searchurl = "<a href=\"https://duckduckgo.com/?q=!ducky+{identifier}+site%3Arobowiki.net\">{name}</a>"\
+                    .format(identifier=name.split(" ")[0].split(".")[-1], name=name)
+                out.append("<tr>\n<th>Name</th>\n<td>\n" + searchurl + "</td>\n<th>Score Distribution</th></tr>")
                 out.append("<tr>\n<th>Flag</th>\n<td>\n" + flagtag + "</td><td rowspan=\"9\">")
                 
                 enemyScores = pickle.loads(zlib.decompress(rumble.ParticipantsScores))
