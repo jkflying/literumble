@@ -105,16 +105,8 @@ class RumbleSelect(webapp.RequestHandler):
             
             out.append("<table><tr><td><b><a href=\"RumbleStats\">LiteRumble Statistics</a></b></td></tr>")
             out.append("<tr><td><b><a href=\"ScoreExplanation\">Score Explanation</a></b></td></tr></table>")
+            out.append("<br>Learn more about Robocode at <a href=\"http://robowiki.net\">Robowiki.net</a>")
             
-            out.append("<small><small>The LiteRumble costs ~$2/week in server time and database access.")
-            out.append("\n<br>If you want help with these costs, please donate via Paypal. </small></small><br>")
-            out.append(
-                '''<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-                <input type="hidden" name="cmd" value="_s-xclick">
-                <input type="hidden" name="hosted_button_id" value="QGM5KMPM5CTWU">
-                <input type="image" src="https://www.paypalobjects.com/en_GB/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online.">
-                <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
-                </form>''')
             
             outstr = string.join(out,"")
             if not timing:
