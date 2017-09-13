@@ -363,7 +363,7 @@ class HandleQueuedResults(webapp.RequestHandler):
                     key = b.key_name
                 botsync[key] = botsync.get(key,0) + 1
 
-            minSize = min(60,len(scores)/2)
+            minSize = min(10,len(scores)/2)
             wrote = False
             
             logging.debug("botsync: " + str(len(botsync)))
