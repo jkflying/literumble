@@ -68,8 +68,8 @@ class UploadedResults(webapp.RequestHandler):
             tqs_r = tq.fetch_statistics_async()
             tqs = tqs_r.get_result()
             last_min = tqs.executed_last_minute
-            if last_min is None or last_min <= 120:
-                last_min = 120
+            if last_min is None or last_min <= 250:
+                last_min = 250
             tasks = tqs.tasks
             if tasks is None:
                 tasks is 0
