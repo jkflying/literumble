@@ -79,6 +79,7 @@ def removeFromRumble(self,requests):
         if rumble is None:
             rumble = structures.Rumble.get_by_key_name(game)
 
+    entry = None
     if name.count(" ") == 0:
         num_underscores = name.count("_")
         error_messages = []
@@ -101,6 +102,8 @@ def removeFromRumble(self,requests):
                 break
         if entry is None:
             return "\n".join(error_messages)
+    else:
+        return "ERROR. Bot name missing version."
     
     if isinstance(entry,structures.BotEntry):
         entry = structures.CachedBotEntry(entry)

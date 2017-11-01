@@ -56,6 +56,9 @@ class UploadedResults(webapp.RequestHandler):
         rumble = results.get("game",None)
         bota = results.get("fname",None)
         botb = results.get("sname",None)
+        if bota and botb:
+            bota_name = bota.split(" ")[0].split(".")[-1]
+            botb_name = botb.split(" ")[0].split(".")[-1]
 
         now = datetime.datetime.now()
         battleTimeStr = results.get("time",None)
@@ -64,7 +67,7 @@ class UploadedResults(webapp.RequestHandler):
             logging.info("Uploaded battle run at " + str(battleTime))
             if battleTime < now - datetime.timedelta(1):
                 self.response.out.write("OK. ERROR: your uploaded data is more than 24 hours old!")
-                logging.info("Old data uploaded, discarding " +  bota_name + " vs " + botb_name + " fought at " + battleTime)
+                logging.info("Old data uploaded, discarding " +  bota_name + " vs " + botb_name + " fought at " + str(battleTime))
                 return
 
         uploads_allowed = global_dict.get("uploads allowed",None)
@@ -84,8 +87,6 @@ class UploadedResults(webapp.RequestHandler):
             global_dict["uploads allowed"]=uploads_allowed
             global_dict["uploads allowed check time"] = now + datetime.timedelta(1./(24*60))
         if not uploads_allowed:
-            bota_name = bota.split(" ")[0].split(".")[-1]
-            botb_name = botb.split(" ")[0].split(".")[-1]
             self.response.out.write("OK. Queue full," + bota_name + " vs " + botb_name + " discarded.")
             logging.info("Queue full, discarding " +  bota_name + " vs " + botb_name)
             return
