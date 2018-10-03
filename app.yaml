@@ -4,7 +4,6 @@ api_version: 1
 
 instance_class: F1
 automatic_scaling:
-  min_idle_instances: 0
   max_idle_instances: 1
   min_pending_latency: 5s
   max_pending_latency: 10s
@@ -15,6 +14,9 @@ libraries:
   version: "latest"
 
 - name: PIL
+  version: "latest"
+
+- name: ujson
   version: "latest"
 
 builtins:

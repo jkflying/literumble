@@ -1,4 +1,3 @@
-application: literumble
 
 dispatch:
     - url: "*/BatchRankings"

@@ -25,8 +25,7 @@ import logging
 from structures import global_dict
 import numpy
 import marshal
-import Queue
-#from Queue import EMPTY
+from collections import deque
 
 global_sync = {}
 #sync_lock = threading.Lock()
@@ -595,25 +594,17 @@ class HandleQueuedResults(webapp.RequestHandler):
                 priobots = [b.replace(' ','_') for b in priobots]
                 
                 prio_string = "[" + string.join(priobots,",") + "]\n"
-                #prio_string = "\nOK. A priority battle got sent back!"
-                #q = taskqueue.Queue("priority-battles")
-                #q.add(taskqueue.Task(payload=prio_string,method="PULL",tag=rumble))
                 logging.info("adding priority battle: " + prio_string + ", " + rumble)
                 
                 rq_name = rumble + "|queue"
                 try:
                     rumble_queue = global_dict[rq_name]
-                    try:
-                        rumble_queue.put_nowait(prio_string)
-                        #logging.info("Added prio battles to queue: " + prio_string)
-                    except Queue.Full:
-                        #logging.info("Queue for priority battles full")
-                        prio_string = None
+                    rumble_queue.append(prio_string)
                 except KeyError:
                     logging.info("No queue for rumble " + rumble + ", adding one!")
-                    global_dict[rq_name] = Queue.Queue(maxsize=300)
+                    global_dict[rq_name] = deque()
                     rumble_queue = global_dict[rq_name]
-                    rumble_queue.put_nowait(prio_string)
+                    rumble_queue.append(prio_string)
             else:
                 logging.info("no suitable priority battle found in " + rumble)
                 if priobot is None:

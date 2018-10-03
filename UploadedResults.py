@@ -26,7 +26,7 @@ import logging
 from structures import global_dict
 import numpy
 import marshal
-import Queue
+from collections import deque
 
 global_sync = {}
 last_write = {}
@@ -96,10 +96,8 @@ class UploadedResults(webapp.RequestHandler):
             and rumble is not None
             and bota is not None
             and botb is not None):
-            #prio_q = taskqueue.Queue("priority-battles")
-            #prio_task_list_rpc = prio_q.lease_tasks_by_tag_async(30,1,rumble)
             try:
-                taskqueue.add(url='/HandleQueuedResults', payload=json.dumps(results))
+                taskqueue.add(url='/HandleQueuedResults', payload=json.dumps(results), headers={'X-AppEngine-FailFast': 'True'})
                 bota_name = bota.split(" ")[0].split(".")[-1]
                 botb_name = botb.split(" ")[0].split(".")[-1]
                 logging.info("adding " +  bota_name + " vs " + botb_name )
@@ -119,16 +117,16 @@ class UploadedResults(webapp.RequestHandler):
             try:
                 rumble_queue = global_dict[rq_name]
                 try:
-                    prio_string = rumble_queue.get_nowait()
+                    prio_string = rumble_queue.pop()
                     logging.info("sending back priority battle: " + prio_string + ", " + rumble)
                     self.response.out.write(prio_string)
                     #logging.info("Sent back priority battles: " + prio_string)
-                except Queue.Empty:
+                except IndexError:
                     #logging.info("No available priority battles")
                     prio_string = None
             except KeyError:
                 logging.info("No queue for rumble " + rumble + ", adding one!")
-                global_dict[rq_name] = Queue.Queue(maxsize=300)
+                global_dict[rq_name] = deque()
             bota_name = bota.split(" ")[0].split(".")[-1]
             botb_name = botb.split(" ")[0].split(".")[-1]
             self.response.out.write("OK. " + bota_name + " vs " + botb_name + " added to queue")
