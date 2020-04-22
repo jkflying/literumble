@@ -20,7 +20,7 @@ from google.appengine.ext import db
 total = "TOTAL"
 participants = "PARTICIPANTS"
 sync = "SYNCHRONIZE"
-allowed_clients = ["1.9.3.5"]
+allowed_clients = ["1.9.3.9"]
 allowed_versions = ["1"]
 
 global_dict = {}
@@ -51,7 +51,7 @@ class ScoreSet:
         self.KNNPBI = 0
         self.NPP = -1
         self.Alive = True
-        
+
 class LiteBot:
     def __init__ (self, bot = None, loadDict = None):
         if bot is not None:
@@ -67,10 +67,10 @@ class LiteBot:
             self.Active = bot.Active
             self.ANPP = bot.ANPP
             self.Uploaders = bot.__dict__.get("Uploaders",[])
-        
+
         if loadDict is not None:
             self.__dict__.update(loadDict)
-            
+
 class CachedBotEntry:
     def __init__(self,bot):
         self.key_name = bot.key().name()
@@ -87,7 +87,7 @@ class CachedBotEntry:
         self.PairingsList = bot.PairingsList
         self.ANPP = bot.ANPP
         self.Uploaders = bot.__dict__.get("Uploaders",[])
-        
+
 class BotEntry(db.Model):
     def init_from_cache(self,bot):
 #        self.key_name = bot.key_name
@@ -104,7 +104,7 @@ class BotEntry(db.Model):
         self.PairingsList = bot.PairingsList
         self.ANPP = float(bot.ANPP)
         self.Uploaders = bot.__dict__.get("Uploaders",[])
-        
+
     #NR = db.StringProperty() --> key_name
     Name = db.StringProperty(indexed = False)
     Battles = db.IntegerProperty(indexed = False)
@@ -118,9 +118,9 @@ class BotEntry(db.Model):
     Active = db.BooleanProperty(indexed = False)
     PairingsList = db.BlobProperty(indexed = False)
     ANPP = db.FloatProperty(indexed = False, default = 0.0)
-    Uploaders = db.StringListProperty(indexed = False) 
-    
-    
+    Uploaders = db.StringListProperty(indexed = False)
+
+
 #class Uploader(db.Model):
 #    #NC = db.StringProperty() --> key_name
 #    Name = db.StringProperty(indexed = False)
@@ -132,7 +132,7 @@ class User:
         self.name = name
         self.total = total
         self.latest = latest
-    
+
 class Rumble(db.Model):
     #NRFTM = db.StringProperty() --> key_name
     Teams = db.BooleanProperty(indexed = False)
@@ -142,21 +142,21 @@ class Rumble(db.Model):
     Field = db.StringProperty(indexed = False)
     Name = db.StringProperty(indexed = False) # key_name
     TotalUploads = db.IntegerProperty(indexed = False)
-    Participants = db.StringListProperty(indexed = False) 
+    Participants = db.StringListProperty(indexed = False)
     AvgBattles = db.FloatProperty(indexed = False, default = 0.0)
     LastUpload = db.StringProperty(indexed = False)
     PriorityBattles = db.BooleanProperty(indexed = False, default = True)
     BatchScoresAccurate = db.BooleanProperty(default = False)
     ParticipantsScores = db.BlobProperty(default = db.Blob(zlib.compress(pickle.dumps({}))), indexed = False)
     Uploaders = db.BlobProperty(indexed = False, default = db.Blob(zlib.compress(pickle.dumps({}))))
-    
+
 default_flag_map = "FLAGMAP"
-allowed_flags = set(['ABW', 'AFG', 'AGO', 'AIA', 'ALA', 'ALB', 'AND', 'ARE', 
-                     'ARG', 'ARM', 'ASM', 'ATA', 'ATF', 'ATG', 'AUS', 'AUT', 
-                     'AZE', 'ANK', 'BDI', 'BLR', 'BRA', 'CAN', 'CHE', 'CHN', 
-                     'CZE', 'DEU', 'ESP', 'FIN', 'FRA', 'GBR', 'GRC', 'HUN', 
-                     'IRL', 'ITA', 'JPN', 'KOR', 'LTU', 'LVA', 'MAN', 'NLD', 
-                     'NOR', 'NZL', 'POL', 'PRT', 'RUS', 'SGP', 'SRB', 'SWE', 
+allowed_flags = set(['ABW', 'AFG', 'AGO', 'AIA', 'ALA', 'ALB', 'AND', 'ARE',
+                     'ARG', 'ARM', 'ASM', 'ATA', 'ATF', 'ATG', 'AUS', 'AUT',
+                     'AZE', 'ANK', 'BDI', 'BLR', 'BRA', 'CAN', 'CHE', 'CHN',
+                     'CZE', 'DEU', 'ESP', 'FIN', 'FRA', 'GBR', 'GRC', 'HUN',
+                     'IRL', 'ITA', 'JPN', 'KOR', 'LTU', 'LVA', 'MAN', 'NLD',
+                     'NOR', 'NZL', 'POL', 'PRT', 'RUS', 'SGP', 'SRB', 'SWE',
                      'SVK', 'THA', 'TUR', 'USA', 'VEN', 'WIKI', 'ZAF'])
 
 class FlagMap(db.Model):
