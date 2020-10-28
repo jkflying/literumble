@@ -155,7 +155,7 @@ allowed_flags = set(['ABW', 'AFG', 'AGO', 'AIA', 'ALA', 'ALB', 'AND', 'ARE',
                      'ARG', 'ARM', 'ASM', 'ATA', 'ATF', 'ATG', 'AUS', 'AUT',
                      'AZE', 'ANK', 'BDI', 'BLR', 'BRA', 'CAN', 'CHE', 'CHN',
                      'CZE', 'DEU', 'ESP', 'FIN', 'FRA', 'GBR', 'GRC', 'HUN',
-                     'IRL', 'ITA', 'JPN', 'KOR', 'LTU', 'LVA', 'MAN', 'NLD',
+                     'IND', 'IRL', 'ITA', 'JPN', 'KOR', 'LTU', 'LVA', 'MAN', 'NLD',
                      'NOR', 'NZL', 'POL', 'PRT', 'RUS', 'SGP', 'SRB', 'SWE',
                      'SVK', 'THA', 'TUR', 'USA', 'VEN', 'WIKI', 'ZAF'])
 
