@@ -20,7 +20,7 @@ from google.appengine.ext import db
 total = "TOTAL"
 participants = "PARTICIPANTS"
 sync = "SYNCHRONIZE"
-allowed_clients = ["1.9.3.9"]
+allowed_clients = ["1.9.4.2"]
 allowed_versions = ["1"]
 
 global_dict = {}
