@@ -251,7 +251,9 @@ class HandleQueuedResults(webapp.RequestHandler):
                 if not hasattr(pairings[i],"Alive"):
                     pairings[i].Alive = True
                 
-                if pairings[i].Alive and pairings[i].Name not in scores:
+                if pairings[i].Name in scores:
+                    pairings[i].Alive = True
+                else:
                     pairings[i].Alive = False
             
                 i += 1
