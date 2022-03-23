@@ -248,8 +248,6 @@ class HandleQueuedResults(webapp.RequestHandler):
                 if pairings[i].Name == b.Name:
                     pairings.pop(i)
                     continue
-                if not hasattr(pairings[i],"Alive"):
-                    pairings[i].Alive = True
                 
                 if pairings[i].Name in scores:
                     pairings[i].Alive = True
