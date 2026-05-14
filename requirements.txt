@@ -1,0 +1,6 @@
+Flask==3.0.3
+gunicorn==22.0.0
+appengine-python-standard==1.1.6
+numpy==1.26.4
+Pillow==10.4.0
+ujson==5.10.0

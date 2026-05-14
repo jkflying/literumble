@@ -1,67 +1,40 @@
 #!/usr/bin/env python
-#import cgi
-#import datetime
-import wsgiref.handlers
-#import time
-#try:
-#    import json
-#except:
-#    import simplejson as json
-import string
-
 import zlib
-import cPickle as pickle
-#import marshal
+import pickle
 
 from google.appengine.ext import db
-#from google.appengine.api import users
-from google.appengine.ext import webapp
-from google.appengine.api import memcache
-#from operator import attrgetter
+from google.appengine.api import memcache, urlfetch
+
 import structures
-from google.appengine.api import urlfetch
-
 from structures import global_dict
-class FetchParseFlags(webapp.RequestHandler):
-    def get(self):
-        global global_dict
-        url = "http://robowiki.net/wiki/RoboRumble/Country_Flags?action=raw"
-        
-        result = urlfetch.fetch(url,method=urlfetch.GET)
-        if result.status_code == 200:
-            tag = "<pre>"
-            endtag = "</pre>"
-            startIndex = string.find(result.content,tag) + len(tag)
-            endIndex = string.find(result.content,endtag,startIndex)
-            assoc = result.content[startIndex:endIndex]
-            lines = assoc.split("\n")
-            flag_map = {}
-            for line in lines:
-                if len(line) > 0:
-                    parts = line.split(",")
-                    if len(parts) == 2 and parts[1] in structures.allowed_flags:
-                        flag_map[parts[0]] = parts[1]
-            
-            db_map = structures.FlagMap(key_name = structures.default_flag_map)
-            db_map.InternalMap = db.Blob(zlib.compress(pickle.dumps(flag_map,pickle.HIGHEST_PROTOCOL)))
-            #db_map.InternalMap = db.Blob(zlib.compress(marshal.dumps(flag_map),1))
-            db.put(db_map)
-            memcache.set(structures.default_flag_map,db_map.InternalMap)
-            global_dict[structures.default_flag_map] = db_map.InternalMap
-            
-            #self.response.out.write(str(flag_map))
-
-            self.response.out.write("\nSuccess!")
 
 
-application = webapp.WSGIApplication([
-    ('/FetchParseFlags', FetchParseFlags)
-], debug=True)
+def fetch_parse_flags():
+    url = "http://robowiki.net/wiki/RoboRumble/Country_Flags?action=raw"
 
+    result = urlfetch.fetch(url, method=urlfetch.GET)
+    if result.status_code == 200:
+        content = result.content
+        if isinstance(content, bytes):
+            content = content.decode('utf-8', errors='replace')
+        tag = "<pre>"
+        endtag = "</pre>"
+        startIndex = content.find(tag) + len(tag)
+        endIndex = content.find(endtag, startIndex)
+        assoc = content[startIndex:endIndex]
+        lines = assoc.split("\n")
+        flag_map = {}
+        for line in lines:
+            if len(line) > 0:
+                parts = line.split(",")
+                if len(parts) == 2 and parts[1] in structures.allowed_flags:
+                    flag_map[parts[0]] = parts[1]
 
-def main():
-    wsgiref.handlers.CGIHandler().run(application)
+        db_map = structures.FlagMap(key_name=structures.default_flag_map)
+        db_map.InternalMap = db.Blob(zlib.compress(pickle.dumps(flag_map, pickle.HIGHEST_PROTOCOL)))
+        db.put(db_map)
+        memcache.set(structures.default_flag_map, db_map.InternalMap)
+        global_dict[structures.default_flag_map] = db_map.InternalMap
 
-
-if __name__ == '__main__':
-    main()
+        return "\nSuccess!"
+    return "\nfetch failed: status " + str(result.status_code)

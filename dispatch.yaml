@@ -1,4 +1,3 @@
-
 dispatch:
     - url: "*/BatchRankings"
-      module: batchratings
+      service: batchratings

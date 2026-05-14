@@ -1,26 +1,39 @@
-#!/usr/bin/env python
 # This Python file uses the following encoding: utf-8
-#import cgi
 import datetime
-#import wsgiref.handlers
-try:
-    import json
-except:
-    import simplejson as json
-#import string
-#import time
+import json
+import logging
+import pickle
 import zlib
 
-import cPickle as pickle
-
 from google.appengine.ext import db
-#from google.appengine.api import users
-#from google.appengine.ext import webapp
+
+
+def fmt(v):
+    """Render score-column floats with two-decimal precision; ``str`` otherwise."""
+    if isinstance(v, float):
+        if v != v:
+            return "nan"
+        return "%.2f" % v
+    return str(v)
+
+
+def load_blob(blob, default):
+    """Decompress and unpickle a Datastore Blob, returning ``default`` on failure.
+
+    ``encoding='latin1'`` lets Py2-pickled str attributes round-trip into Py3.
+    """
+    if blob is None:
+        return default
+    try:
+        return pickle.loads(zlib.decompress(blob), encoding='latin1')
+    except Exception as e:
+        logging.error("load_blob failed: %s", e)
+        return default
 
 total = "TOTAL"
 participants = "PARTICIPANTS"
 sync = "SYNCHRONIZE"
-allowed_clients = ["1.9.4.2"]
+allowed_clients = ["1.10.1"]
 allowed_versions = ["1"]
 
 global_dict = {}

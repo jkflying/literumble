@@ -1,94 +1,36 @@
-runtime: python27
-threadsafe: yes
-api_version: 1
+runtime: python311
+app_engine_apis: true
+entrypoint: gunicorn -b :$PORT --workers 1 --threads 8 --timeout 60 main:app
 
 instance_class: F1
 automatic_scaling:
+  max_instances: 4
   max_idle_instances: 1
   min_pending_latency: 5s
   max_pending_latency: 10s
   max_concurrent_requests: 50
-
-libraries:
-- name: numpy
-  version: "latest"
-
-- name: PIL
-  version: "latest"
-
-- name: ujson
-  version: "latest"
-
-builtins:
-- remote_api: on
-#- appstats: on
 
 error_handlers:
 - error_code: over_quota
   file: over_quota.txt
 
 handlers:
-- url: .UploadedResults
-  script: UploadedResults.application
-
 - url: /flags
   static_dir: flags
   expiration: "99d"
-
-- url: .HandleQueuedResults
-  script: HandleQueuedResults.application
-  login: admin
-
-- url: .FetchParseFlags
-  script: FetchParseFlags.application
-  login: admin
-
-- url: .Rankings
-  script: Rankings.application
-  
-- url: .RatingsFile
-  script: RatingsFile.application
-  
-- url: .RemoveOldParticipant
-  script: RemoveOldParticipant.application
-
-- url: .BotDetails
-  script: BotDetails.application
-
-- url: /favicon.ico
+- url: /favicon\.ico
   static_files: favicon.ico
-  upload: favicon.ico
+  upload: favicon\.ico
   expiration: "99d"
-  
-- url: /style.css
+- url: /style\.css
   static_files: style.css
-  upload: style.css
-
-- url: /
-  script: RumbleSelect.application
-
-- url: .RumbleStats
-  script: RumbleStats.application
-
-- url: .QueueBatchRankings
-  script: BatchRankings.application
-  login: admin
-
-- url: .QueueDailyBatchRankings
-  script: BatchRankings.application
-  login: admin
-
-- url: .ScoreExplanation
+  upload: style\.css
+- url: /ScoreExplanation
   static_files: ScoreExplanation.html
-  upload: ScoreExplanation.html
-
-- url: .BotCompare
-  script: BotCompare.application
-
-- url: .robots.txt
+  upload: ScoreExplanation\.html
+- url: /robots\.txt
   static_files: robots.txt
-  upload: robots.txt
-
-- url: .googlea1fa86d6b3ddcb15.html
+  upload: robots\.txt
+- url: /googlea1fa86d6b3ddcb15\.html
   static_files: googlea1fa86d6b3ddcb15.html
-  upload: googlea1fa86d6b3ddcb15.html
+  upload: googlea1fa86d6b3ddcb15\.html
