@@ -39,7 +39,7 @@ app.add_url_rule(
 )
 app.add_url_rule(
     "/RemoveOldParticipant",
-    view_func=require_admin(RemoveOldParticipant.remove_old_participant),
+    view_func=RemoveOldParticipant.remove_old_participant,
     methods=["GET", "POST"],
 )
 app.add_url_rule(
