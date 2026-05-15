@@ -1,1 +1,1 @@
-gcloud app deploy app.yaml batchratings.yaml
+gcloud app deploy --project=literumble app.yaml batchratings.yaml cron.yaml

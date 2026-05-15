@@ -96,7 +96,7 @@ def batch_rankings():
                 gc.collect(2)
             first = False
 
-            logging.info("mem usage at start of " + r.Name + ": " + str(runtime.memory_usage().current()) + "MB")
+            logging.info("mem usage at start of " + r.Name + ": " + str(runtime.memory_usage().current) + "MB")
             scores = load_blob(r.ParticipantsScores, {})
             if not isinstance(scores, dict):
                 scores = {}
@@ -157,7 +157,7 @@ def batch_rankings():
                 missingIndexes.pop()
             missingIndexes = None
 
-            logging.info("mem usage after loading bots: " + str(runtime.memory_usage().current()) + "MB")
+            logging.info("mem usage after loading bots: " + str(runtime.memory_usage().current) + "MB")
 
             bots = [b for b in bots if b is not None]
 
@@ -215,7 +215,7 @@ def batch_rankings():
 
             gc.collect()
             logging.info(str(len(bots)) + " bots loaded, total of " + str(totalAlivePairs) + " alive pairings")
-            logging.info("mem usage after unzipping pairings: " + str(runtime.memory_usage().current()) + "MB")
+            logging.info("mem usage after unzipping pairings: " + str(runtime.memory_usage().current) + "MB")
 
             # Vote
             mins = numpy.nanmax(APSs, 1)
@@ -324,7 +324,7 @@ def batch_rankings():
             KNN_PBI = None
             APSs = None
             NPPs = None
-            logging.info("mem usage after zipping: " + str(runtime.memory_usage().current()) + "MB")
+            logging.info("mem usage after zipping: " + str(runtime.memory_usage().current) + "MB")
 
             gc.collect()
             if len(botsdict) > 0:
@@ -346,7 +346,7 @@ def batch_rankings():
             gc.collect()
 
             r.ParticipantsScores = db.Blob(zlib.compress(pickle.dumps(scores, pickle.HIGHEST_PROTOCOL), 3))
-            logging.info("mem usage after participants zipping: " + str(runtime.memory_usage().current()) + "MB")
+            logging.info("mem usage after participants zipping: " + str(runtime.memory_usage().current) + "MB")
             scores = None
 
             if write:
@@ -389,7 +389,7 @@ def batch_rankings():
 
             db.put([r])
             r = None
-            logging.info("mem usage after write: " + str(runtime.memory_usage().current()) + "MB")
+            logging.info("mem usage after write: " + str(runtime.memory_usage().current) + "MB")
 
         for rpc in rpcList:
             rpc.get_result()
