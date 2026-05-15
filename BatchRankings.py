@@ -36,14 +36,9 @@ def queue_batch_rankings():
     return "queued"
 
 
-def queue_daily_batch_rankings():
-    taskqueue.add(url='/BatchRankings',
-                  payload="write=true",
-                  countdown=0)
-    for i in [6, 12, 18]:
-        taskqueue.add(url='/BatchRankings',
-                      payload="",
-                      countdown=i * 3600)
+def queue_hourly_batch_rankings():
+    payload = "write=true" if datetime.datetime.now(datetime.timezone.utc).hour % 3 == 0 else ""
+    taskqueue.add(url='/BatchRankings', payload=payload)
     return "queued"
 
 

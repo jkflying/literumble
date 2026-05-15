@@ -48,7 +48,7 @@ app.add_url_rule(
     methods=["GET"],
 )
 app.add_url_rule(
-    "/QueueDailyBatchRankings",
-    view_func=require_cron(BatchRankings.queue_daily_batch_rankings),
+    "/QueueHourlyBatchRankings",
+    view_func=require_cron(BatchRankings.queue_hourly_batch_rankings),
     methods=["GET"],
 )

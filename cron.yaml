@@ -1,8 +1,8 @@
 cron:
 
 - description: calculate batch rankings
-  url: /QueueDailyBatchRankings
-  schedule: every 24 hours synchronized
+  url: /QueueHourlyBatchRankings
+  schedule: every 1 hours synchronized
   target: default
 
 - description: poll main page
