@@ -33,7 +33,7 @@ def load_blob(blob, default):
 total = "TOTAL"
 participants = "PARTICIPANTS"
 sync = "SYNCHRONIZE"
-allowed_clients = ["1.10.1"]
+allowed_clients = ["1.9.5.6"]
 allowed_versions = ["1"]
 
 global_dict = {}
