@@ -148,7 +148,7 @@ def rankings():
         order = "APS CI"
     out = []
 
-    gameTitle = "RANKINGS - " + game.upper() + " WITH " + str(len(bots)) + " BOTS"
+    gameTitle = structures.home_link("LITERUMBLE", dark) + " RANKINGS - " + game.upper() + " WITH " + str(len(bots)) + " BOTS"
     out.append(structures.header(game, gameTitle, dark))
 
     pairVals = [b.Pairings for b in bots]

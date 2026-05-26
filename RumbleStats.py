@@ -65,7 +65,7 @@ def rumble_stats():
         tq = taskqueue.Queue()
         tqs_r = tq.fetch_statistics_async()
         out = []
-        out.append(structures.header("Statistics", "LiteRumble Statistics", dark))
+        out.append(structures.header("Statistics", structures.home_link("LiteRumble", dark) + " Statistics", dark))
         out.append("\nStats generated: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC")
         out.append("\nAllowed Robocode versions: " + ", ".join(structures.allowed_clients) + "\n<br><br>\n")
         q = structures.Rumble.all()
@@ -154,7 +154,7 @@ def rumble_stats():
         out.insert(2, tq_string)
         outstr = "".join(out)
 
-    memcache.set(cacheKey, outstr)
+    memcache.set(cacheKey, outstr, time=630)
     global_dict[cacheKey] = outstr
 
     elapsed = time.time() - starttime

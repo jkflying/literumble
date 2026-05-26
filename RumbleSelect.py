@@ -88,7 +88,7 @@ def rumble_select():
 
         outstr = "".join(out)
         if not timing:
-            memcache.set(cacheKey, outstr)
+            memcache.set(cacheKey, outstr, time=3600)
 
     elapsed = time.time() - starttime
     if timing:

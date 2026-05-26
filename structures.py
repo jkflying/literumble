@@ -215,6 +215,12 @@ def header(title, page_header, dark=False):
     return _html_header_tmpl % (title, cls, page_header)
 
 
+def home_link(text="LiteRumble", dark=False):
+    """A link back to the home page, preserving the dark theme when active."""
+    href = "/?theme=dark" if dark else "/"
+    return '<a href="' + href + '">' + text + '</a>'
+
+
 country_lookup = {
  "NONE" : "Unknown",
  "MAN" : "Unknown",
