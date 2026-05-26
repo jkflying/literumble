@@ -18,21 +18,22 @@ def fmt(v):
     return str(v)
 
 
+rolling_battle_cap = 10000 // 2  # n_eff cap; matches the upload-handler rolling window
+
+
 def pairing_ci(scoreset):
-    """Return the per-pairing 95% CI half-width on its APS, or ``None`` when no
-    spread data has accumulated yet.
-    """
-    rolling_battle_cap = 10000 // 2
+    """95% CI half-width on a pairing's APS, or None until it has >= 2 battles
+    (a single battle gives a degenerate Var_APS of 0)."""
     var = getattr(scoreset, "Var_APS", -1.0)
     if var is None or var < 0:
         return None
     try:
-        n_eff = min(int(scoreset.Battles), rolling_battle_cap)
+        battles = int(scoreset.Battles)
     except (TypeError, ValueError, AttributeError):
         return None
-    if n_eff < 1:
+    if battles < 2:
         return None
-    return 1.96 * math.sqrt(max(0.0, var) / n_eff)
+    return 1.96 * math.sqrt(max(0.0, var) / min(battles, rolling_battle_cap))
 
 
 def load_blob(blob, default):

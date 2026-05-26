@@ -232,7 +232,7 @@ def handle_queued_results():
         battles = 0
         alivePairings = 0
         ci_var_sum = 0.0
-        ci_has_data = False
+        ci_count = 0
         if len(pairings) > 0:
             for p in pairings:
                 if p.Alive:
@@ -247,11 +247,9 @@ def handle_queued_results():
                     alivePairings += 1
 
                     pvar = p.__dict__.get("Var_APS", -1.0)
-                    if pvar is not None and pvar >= 0:
-                        n_eff = min(int(p.Battles), maxPerPair)
-                        if n_eff > 0:
-                            ci_var_sum += max(0.0, pvar) / n_eff
-                            ci_has_data = True
+                    if pvar is not None and pvar >= 0 and int(p.Battles) >= 2:
+                        ci_var_sum += max(0.0, pvar) / min(int(p.Battles), maxPerPair)
+                        ci_count += 1
 
             if alivePairings > 0:
                 aps /= alivePairings
@@ -260,8 +258,8 @@ def handle_queued_results():
             b.Survival = survival
             b.PL = pl
             b.Battles = battles
-            if ci_has_data and alivePairings > 0:
-                b.APS_CI = 1.96 * math.sqrt(ci_var_sum / (alivePairings * alivePairings))
+            if ci_count > 0 and alivePairings > 0:
+                b.APS_CI = 1.96 * math.sqrt(ci_var_sum / (alivePairings * ci_count))
             else:
                 b.APS_CI = -1.0
 

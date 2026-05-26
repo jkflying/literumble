@@ -270,7 +270,7 @@ def batch_rankings():
                 aliveCount = 0
 
                 ci_var_sum = 0.0
-                ci_has_data = False
+                ci_count = 0
 
                 changed = False
                 for p in pairings:
@@ -282,11 +282,9 @@ def batch_rankings():
                         aliveCount += 1
 
                         pvar = p.__dict__.get("Var_APS", -1.0)
-                        if pvar is not None and pvar >= 0:
-                            n_eff = min(int(p.Battles), maxPerPair)
-                            if n_eff > 0:
-                                ci_var_sum += max(0.0, pvar) / n_eff
-                                ci_has_data = True
+                        if pvar is not None and pvar >= 0 and int(p.Battles) >= 2:
+                            ci_var_sum += max(0.0, pvar) / min(int(p.Battles), maxPerPair)
+                            ci_count += 1
                         p.KNNPBI = float(KNN_PBI[j, i])
                         p.NPP = float(NPPs[j, i])
 
@@ -320,8 +318,8 @@ def batch_rankings():
                 else:
                     b.APS = -1.0
 
-                if ci_has_data and aliveCount > 0:
-                    b.APS_CI = 1.96 * math.sqrt(ci_var_sum / (aliveCount * aliveCount))
+                if ci_count > 0 and aliveCount > 0:
+                    b.APS_CI = 1.96 * math.sqrt(ci_var_sum / (aliveCount * ci_count))
                 else:
                     b.APS_CI = -1.0
 
