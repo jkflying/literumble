@@ -70,6 +70,8 @@ class ComparePair:
         self.B_Battles = botb.Battles
         self.A_LastUpload = bota.LastUpload
         self.B_LastUpload = botb.LastUpload
+        self.A_Var = getattr(bota, "Var_APS", -1.0)
+        self.B_Var = getattr(botb, "Var_APS", -1.0)
         self.Opponent_APS = eScore.APS if eScore else float('nan')
 
 class ScoreSet:

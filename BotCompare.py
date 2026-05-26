@@ -2,6 +2,7 @@
 import base64
 import io
 import logging
+import math
 import time
 from operator import attrgetter
 
@@ -260,6 +261,11 @@ def bot_compare():
     Battlesb = 0
     LastUploada = None
     LastUploadb = None
+    cap = structures.rolling_battle_cap
+    varSuma = 0.0
+    varSumb = 0.0
+    varCounta = 0
+    varCountb = 0
     for cp in commonList:
         APSa += cp.A_APS
         APSb += cp.B_APS
@@ -271,6 +277,12 @@ def bot_compare():
             Winsb += 1.0
         Battlesa += cp.A_Battles
         Battlesb += cp.B_Battles
+        if cp.A_Var >= 0 and int(cp.A_Battles) >= 2:
+            varSuma += cp.A_Var / (min(int(cp.A_Battles), cap) - 1)
+            varCounta += 1
+        if cp.B_Var >= 0 and int(cp.B_Battles) >= 2:
+            varSumb += cp.B_Var / (min(int(cp.B_Battles), cap) - 1)
+            varCountb += 1
         if LastUploada is None or cp.A_LastUpload > LastUploada:
             LastUploada = cp.A_LastUpload
         if LastUploadb is None or cp.B_LastUpload > LastUploadb:
@@ -283,6 +295,28 @@ def bot_compare():
     Survivalb *= inv_len
     Winsa *= 100 * inv_len
     Winsb *= 100 * inv_len
+
+    # Common APS confidence intervals and significance of the difference
+    K = len(commonList)
+    seA2 = varSuma / (K * varCounta) if K > 0 and varCounta > 0 else None
+    seB2 = varSumb / (K * varCountb) if K > 0 and varCountb > 0 else None
+    ciA = "n/a" if seA2 is None else "&plusmn;" + structures.fmt(1.96 * math.sqrt(seA2))
+    ciB = "n/a" if seB2 is None else "&plusmn;" + structures.fmt(1.96 * math.sqrt(seB2))
+
+    if seA2 is not None and seB2 is not None:
+        diff = APSa - APSb
+        seDiff = math.sqrt(seA2 + seB2)
+        lo = diff - 1.96 * seDiff
+        hi = diff + 1.96 * seDiff
+        ciTxt = " (CI " + structures.fmt(lo) + " to " + structures.fmt(hi) + ")"
+        if lo > 0:
+            verdict = "<b>" + botaName + "</b> +" + structures.fmt(diff) + ciTxt
+        elif hi < 0:
+            verdict = "<b>" + botbName + "</b> +" + structures.fmt(-diff) + ciTxt
+        else:
+            verdict = "Tie: diff " + structures.fmt(diff) + ciTxt
+    else:
+        verdict = "n/a"
 
     out.append("\n<tr><th>Common APS</th>")
     out.append("\n<td>" + structures.fmt(APSa) + "</td><td>" + structures.fmt(APSb) + "</td></tr>")
@@ -298,6 +332,10 @@ def bot_compare():
     out.append("\n<tr><th>Common Pairings</th>")
     out.append("\n<td colspan=\"2\" align=\"center\">" + str(len(commonList)) + "</td>")
     out.append("</tr>")
+    out.append("\n<tr><th>Common APS 95% CI</th>")
+    out.append("\n<td>" + ciA + "</td><td>" + ciB + "</td></tr>")
+    out.append("\n<tr><th>Statistical Comparison</th>")
+    out.append("\n<td colspan=\"2\" align=\"center\">" + verdict + "</td></tr>")
 
     out.append("\n</table>\n<br>\n<table>\n<tr>")
 

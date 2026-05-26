@@ -292,6 +292,8 @@ def bot_details():
     out.append("<input type=\"hidden\" name=\"game\" value=\"" + game + "\" />")
     out.append("<input type=\"hidden\" name=\"bota\" value=\"" + name + "\" />")
     out.append("<input type=\"text\" name=\"botb\" value=\"" + name + "\" />")
+    if dark:
+        out.append("<input type=\"hidden\" name=\"theme\" value=\"dark\" />")
     out.append("<input type=\"submit\" value=\"Compare\" /></form>")
     out.append("</td><td>Opponent APS (X) vs. Pairing (Y) </td></tr></table>")
 
