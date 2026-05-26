@@ -33,7 +33,7 @@ def pairing_ci(scoreset):
         return None
     if battles < 2:
         return None
-    return 1.96 * math.sqrt(max(0.0, var) / min(battles, rolling_battle_cap))
+    return 1.96 * math.sqrt(max(0.0, var) / (min(battles, rolling_battle_cap) - 1))
 
 
 def load_blob(blob, default):

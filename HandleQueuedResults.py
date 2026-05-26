@@ -248,7 +248,7 @@ def handle_queued_results():
 
                     pvar = p.__dict__.get("Var_APS", -1.0)
                     if pvar is not None and pvar >= 0 and int(p.Battles) >= 2:
-                        ci_var_sum += max(0.0, pvar) / min(int(p.Battles), maxPerPair)
+                        ci_var_sum += max(0.0, pvar) / (min(int(p.Battles), maxPerPair) - 1)
                         ci_count += 1
 
             if alivePairings > 0:
