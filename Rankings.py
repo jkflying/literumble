@@ -16,18 +16,21 @@ def rankings():
     requests = {}
     if parts[0] != "":
         for pair in parts:
-            ab = pair.split('=')
-            requests[ab[0]] = ab[1]
+            ab = pair.split('=', 1)
+            requests[ab[0]] = ab[1] if len(ab) > 1 else ""
 
     game = requests.get("game", "meleerumble")
     lim = int(requests.get("limit", "10000000"))
     order = requests.get("order", "APS")
     timing = bool(requests.get("timing", False))
     api = bool(requests.get("api", False))
+    dark = requests.get("theme", "") == "dark"
 
     extraArgs = ""
     if timing:
         extraArgs += "&amp;timing=1"
+    if dark:
+        extraArgs += "&amp;theme=dark"
     if lim < 100000:
         extraArgs += "&amp;limit=" + str(lim)
 
@@ -140,7 +143,7 @@ def rankings():
     out = []
 
     gameTitle = "RANKINGS - " + game.upper() + " WITH " + str(len(bots)) + " BOTS"
-    out.append(structures.html_header % (game, gameTitle))
+    out.append(structures.header(game, gameTitle, dark))
 
     pairVals = [b.Pairings for b in bots]
     if pairVals and max(pairVals) == min(pairVals) == (len(bots) - 1):

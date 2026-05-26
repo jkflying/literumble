@@ -104,8 +104,9 @@ def _remove_from_rumble(requests):
     scores.pop(name, 1)
     rumble.ParticipantsScores = zlib.compress(pickle.dumps(scores, pickle.HIGHEST_PROTOCOL), 4)
 
-    memcache.delete("home")
+    memcache.delete_multi(["home", "home_dark"])
     global_dict.pop("home", 0)
+    global_dict.pop("home_dark", 0)
 
     memcache.set(entry.key_name, entry)
     global_dict[entry.key_name] = entry

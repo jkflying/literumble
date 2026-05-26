@@ -16,21 +16,26 @@ def rumble_select():
     requests = {}
     if parts[0] != "":
         for pair in parts:
-            ab = pair.split('=')
-            requests[ab[0]] = ab[1]
+            ab = pair.split('=', 1)
+            requests[ab[0]] = ab[1] if len(ab) > 1 else ""
 
     timing = bool(requests.get("timing", False))
     regen = bool(requests.get("regen", False))
+    dark = requests.get("theme", "") == "dark"
 
     extraArgs = ""
     if timing:
         extraArgs += "&amp;timing=1"
-    outstr = global_dict.get("home", None)
+    if dark:
+        extraArgs += "&amp;theme=dark"
+
+    cacheKey = "home_dark" if dark else "home"
+    outstr = global_dict.get(cacheKey, None)
     if outstr is None and not regen:
-        outstr = memcache.get("home")
+        outstr = memcache.get(cacheKey)
     if outstr is None or regen:
         out = []
-        out.append(structures.html_header % ("Home", "LiteRumble - Home"))
+        out.append(structures.header("Home", "LiteRumble - Home", dark))
 
         q = structures.Rumble.all()
 
@@ -69,13 +74,21 @@ def rumble_select():
 
             out.append("</table>")
 
-        out.append("<table><tr><td><b><a href=\"RumbleStats\">LiteRumble Statistics</a></b></td></tr>")
+        # extraArgs is prefixed with "&amp;" to chain onto an existing query string;
+        # these links have no base param, so start a fresh "?" query instead.
+        baseArgs = ("?" + extraArgs.replace("&amp;", "", 1)) if extraArgs else ""
+        out.append("<table><tr><td><b><a href=\"RumbleStats" + baseArgs + "\">LiteRumble Statistics</a></b></td></tr>")
         out.append("<tr><td><b><a href=\"ScoreExplanation\">Score Explanation</a></b></td></tr></table>")
         out.append("<br>Learn more about Robocode at <a href=\"http://robowiki.net\">Robowiki.net</a>")
 
+        if dark:
+            out.append("<br><a href=\"?theme=light\">Light mode</a>")
+        else:
+            out.append("<br><a href=\"?theme=dark\">Dark mode</a>")
+
         outstr = "".join(out)
         if not timing:
-            memcache.set("home", outstr)
+            memcache.set(cacheKey, outstr)
 
     elapsed = time.time() - starttime
     if timing:

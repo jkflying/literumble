@@ -22,8 +22,8 @@ def bot_compare():
     requests = {}
     if parts[0] != "":
         for pair in parts:
-            ab = pair.split('=')
-            requests[ab[0]] = ab[1]
+            ab = pair.split('=', 1)
+            requests[ab[0]] = ab[1] if len(ab) > 1 else ""
 
     game = requests.get("game")
     if game is None:
@@ -40,10 +40,13 @@ def bot_compare():
     lim = int(requests.get("limit", "10000000"))
     order = requests.get("order", None)
     timing = bool(requests.get("timing", False))
+    dark = requests.get("theme", "") == "dark"
 
     extraArgs = ""
     if timing:
         extraArgs += "&amp;timing=1"
+    if dark:
+        extraArgs += "&amp;theme=dark"
     reverseSort = True
 
     if order is None or order == "" or order.replace(" ", "") == "":
@@ -190,7 +193,7 @@ def bot_compare():
 
     gameHref = "<a href=\"Rankings?game=" + game + extraArgs + "\">" + game + "</a>"
     gameTitle = "Bot details of <b>" + botaName + " vs. " + botbName + "</b> in " + gameHref + " vs. " + str(len(commonList)) + " bots."
-    out.append(structures.html_header % (game, gameTitle))
+    out.append(structures.header(game, gameTitle, dark))
 
     out.append("\n<table><tr>")
 

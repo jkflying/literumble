@@ -349,7 +349,7 @@ def handle_queued_results():
 
     if newBot or wrote:
         game.put()
-        memcache.delete("home")
+        memcache.delete_multi(["home", "home_dark"])
 
     botsDict = {rumble: game}
     global_dict[rumble] = game

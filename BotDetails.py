@@ -21,8 +21,8 @@ def bot_details():
     requests = {}
     if parts[0] != "":
         for pair in parts:
-            ab = pair.split('=')
-            requests[ab[0]] = ab[1]
+            ab = pair.split('=', 1)
+            requests[ab[0]] = ab[1] if len(ab) > 1 else ""
 
     game = requests.get("game")
     if game is None:
@@ -36,10 +36,13 @@ def bot_details():
     order = requests.get("order", None)
     timing = bool(requests.get("timing", False))
     api = bool(requests.get("api", False))
+    dark = requests.get("theme", "") == "dark"
 
     extraArgs = ""
     if timing:
         extraArgs += "&amp;timing=1"
+    if dark:
+        extraArgs += "&amp;theme=dark"
     reverseSort = True
 
     if order is None or order.replace(" ", "") == "":
@@ -214,7 +217,7 @@ def bot_details():
 
     flagtag = "<img id='flag' src=\"/flags/" + bot.Flag + ".gif\">  " + structures.country_lookup[bot.Flag]
     endName = name.split(" ")[0].split(".")[-1]
-    out.append(structures.html_header % (endName + " in " + game, gameTitle))
+    out.append(structures.header(endName + " in " + game, gameTitle, dark))
     out.append("<table>\n")
     wikiurl = "<a href=\"https://robowiki.net/wiki/{identifier}\">{name}</a>" \
         .format(identifier=name.split(" ")[0].split(".")[-1], name=name)

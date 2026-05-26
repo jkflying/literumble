@@ -44,24 +44,28 @@ def rumble_stats():
     requests = {}
     if parts[0] != "":
         for pair in parts:
-            ab = pair.split('=')
-            requests[ab[0]] = ab[1]
+            ab = pair.split('=', 1)
+            requests[ab[0]] = ab[1] if len(ab) > 1 else ""
 
     timing = bool(requests.get("timing", False))
     regen = bool(requests.get("regen", False))
+    dark = requests.get("theme", "") == "dark"
 
     extraArgs = ""
+    if dark:
+        extraArgs += "&amp;theme=dark"
 
+    cacheKey = "stats_dark" if dark else "stats"
     outstr = None
     if not regen:
-        outstr = global_dict.get("stats", None)
+        outstr = global_dict.get(cacheKey, None)
         if outstr is None:
-            outstr = memcache.get("stats")
+            outstr = memcache.get(cacheKey)
     if outstr is None:
         tq = taskqueue.Queue()
         tqs_r = tq.fetch_statistics_async()
         out = []
-        out.append(structures.html_header % ("Statistics", "LiteRumble Statistics"))
+        out.append(structures.header("Statistics", "LiteRumble Statistics", dark))
         out.append("\nStats generated: " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " UTC")
         out.append("\nAllowed Robocode versions: " + ", ".join(structures.allowed_clients) + "\n<br><br>\n")
         q = structures.Rumble.all()
@@ -150,8 +154,8 @@ def rumble_stats():
         out.insert(2, tq_string)
         outstr = "".join(out)
 
-    memcache.set("stats", outstr)
-    global_dict["stats"] = outstr
+    memcache.set(cacheKey, outstr)
+    global_dict[cacheKey] = outstr
 
     elapsed = time.time() - starttime
     if timing:

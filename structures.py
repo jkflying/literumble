@@ -179,8 +179,14 @@ class FlagMap(db.Model):
 
 
 # USAGE:
-#    html_header % (Title, PageTitleHeader)
-html_header = """<!DOCTYPE html><html><head><meta charset="utf-8"><title>LiteRumble - %s</title><link rel="stylesheet" type="text/css" media="all" href="style.css" /></head><body><h3>%s</h3>"""
+#    header(Title, PageTitleHeader, dark)
+_html_header_tmpl = """<!DOCTYPE html><html><head><meta charset="utf-8"><title>LiteRumble - %s</title><link rel="stylesheet" type="text/css" media="all" href="style.css" /></head><body%s><h3>%s</h3>"""
+
+
+def header(title, page_header, dark=False):
+    """Render the page header, adding a ``dark`` body class when requested."""
+    cls = ' class="dark"' if dark else ''
+    return _html_header_tmpl % (title, cls, page_header)
 
 
 country_lookup = {

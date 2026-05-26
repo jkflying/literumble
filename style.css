@@ -64,3 +64,30 @@ td.red {
     align: center;
     border: black 1px solid;
 }
+
+/* Dark theme: opt-in via ?theme=dark, applied as <body class="dark">. */
+body.dark {
+	background-color: #1e1e1e;
+	color: #ddd;
+}
+body.dark table, body.dark td, body.dark th {
+	border-color: #444;
+}
+body.dark th > a, body.dark th > a:active, body.dark th > a:visited {
+	color: #ddd;
+}
+body.dark a, body.dark a:visited {
+	color: #6cb6ff;
+}
+body.dark tr:nth-child(odd), body.dark tr.dim {
+	background-color: #2a2a2a;
+}
+body.dark td.green {
+	background-color: #4c6b00;
+}
+body.dark td.red {
+	background-color: #a33b00;
+}
+body.dark #distribution, body.dark #distribution2 {
+	border-color: #ddd;
+}
