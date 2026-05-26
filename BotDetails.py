@@ -138,9 +138,13 @@ def bot_details():
 
     if lim > 0:
         bots = [b for b in bots if getattr(b, 'Alive', True)]
-        if bots and order not in bots[0].__dict__:
-            order = "Name"
-        bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)
+        if order == "APS CI":
+            ci = structures.pairing_ci
+            bots = sorted(bots, key=lambda b: ci(b) if ci(b) is not None else -1.0, reverse=reverseSort)
+        else:
+            if bots and order not in bots[0].__dict__:
+                order = "Name"
+            bots = sorted(bots, key=attrgetter(order), reverse=reverseSort)
 
     if api:
         outs = ["{"]
