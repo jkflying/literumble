@@ -490,17 +490,30 @@ def handle_queued_results():
                 priopairs = pairingsarray[1]
 
         if priobot2 is None and priopairs is not None and priobot is not None:
-            alive_battles = [p.Battles for p in priopairs if p.Name in scores and scores[p.Name].Active]
-            if alive_battles:
-                minbat = min(alive_battles)
-                possPairs = [p for p in priopairs if p.Battles <= minbat and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active]
-                if len(possPairs) < min(50, 0.5 * len(scores)):
-                    possPairs = [p for p in priopairs if p.Battles <= minbat + 1 and p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active]
-                if len(possPairs) > 0:
-                    priobot2 = random.choice(possPairs).Name
-                    logging.info("successful local search for low-battled pair")
-                else:
-                    logging.info("unsuccessful local search for low-battled pair")
+            alive = [p for p in priopairs
+                     if p.Name != priobot.Name and p.Name in scores and scores[p.Name].Active]
+            unknown = [p for p in alive if structures.pairing_ci(p) is None]
+            if unknown:
+                minbat = min(int(p.Battles) for p in unknown)
+                poss = [p for p in unknown if int(p.Battles) <= minbat]
+                if len(poss) < min(50, 0.5 * len(scores)):
+                    poss = [p for p in unknown if int(p.Battles) <= minbat + 1]
+                priobot2 = random.choice(poss).Name
+                logging.info("successful local search for undefined-CI pair")
+            elif alive:
+                cap = structures.rolling_battle_cap
+                def reduction(p):
+                    n = min(int(p.Battles), cap)
+                    return max(0.0, p.Var_APS) / (n * (n + 1.0))
+                scored = [(reduction(p), p) for p in alive]
+                best = max(r for r, p in scored)
+                band = [p for r, p in scored if r >= 0.5 * best]
+                if len(band) < min(50, 0.5 * len(scores)):
+                    band = [p for r, p in scored if r >= 0.25 * best]
+                priobot2 = random.choice(band).Name
+                logging.info("successful local search for high-CI pair")
+            else:
+                logging.info("unsuccessful local search for CI pair")
 
         if priobot is not None and priobot2 is not None:
             priobots = [priobot.Name, priobot2]
