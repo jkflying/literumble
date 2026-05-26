@@ -150,6 +150,8 @@ def bot_details():
         outs.append(bot.Flag)
         outs.append("\",\n\"APS\":")
         outs.append(structures.fmt(bot.APS))
+        outs.append(",\n\"APS_CI\":")
+        outs.append(structures.fmt(getattr(bot, "APS_CI", -1.0)))
         outs.append(",\n\"PWIN\":")
         outs.append(structures.fmt(50.0 * float(bot.PL) / bot.Pairings + 50.0))
         outs.append(",\n\"ANPP\":")
@@ -172,22 +174,26 @@ def bot_details():
                 "\"flag\"",
                 "\"rank\"",
                 "\"APS\"",
+                "\"APS_CI\"",
                 "\"NPP\"",
                 "\"survival\"",
                 "\"KNNPBI\"",
                 "\"battles\"",
                 "\"latest\""]
-            escapes = ["\"", "\"", "", "", "", "", "", "", "\""]
+            escapes = ["\"", "\"", "", "", "", "", "", "", "", "\""]
             count = 0
             for b in bots:
                 count += 1
                 if count > lim:
                     break
 
+                bci = structures.pairing_ci(b)
+
                 cells = [b.Name,
                          b.Flag,
                          count,
                          b.APS,
+                         -1.0 if bci is None else bci,
                          b.NPP,
                          b.Survival,
                          b.KNNPBI,
@@ -271,6 +277,9 @@ def bot_details():
 
     out.append("</td></tr>")
     out.append("<tr>\n<th>APS</th>\n<td>\n" + structures.fmt(bot.APS) + "</td></tr>")
+    botCI = getattr(bot, "APS_CI", -1.0)
+    botCIStr = "n/a" if (botCI is None or botCI < 0) else "&plusmn;" + structures.fmt(botCI)
+    out.append("<tr>\n<th>APS CI</th>\n<td>\n" + botCIStr + "</td></tr>")
     out.append("<tr>\n<th>PWIN</th>\n<td>\n" + structures.fmt(50.0 * float(bot.PL) / bot.Pairings + 50.0) + "</td></tr>")
     out.append("<tr>\n<th>ANPP</th>\n<td>\n" + structures.fmt(bot.ANPP) + "</td></tr>")
     out.append("<tr>\n<th>Vote</th>\n<td>\n" + structures.fmt(bot.VoteScore) + "</td></tr>")
@@ -293,6 +302,7 @@ def bot_details():
                     "Name",
                     "",
                     "APS",
+                    "APS CI",
                     "NPP",
                     "Survival",
                     "KNNPBI",
@@ -315,9 +325,9 @@ def bot_details():
                 out.append("\n<th>" + orderHref + "</th>")
         out.append("\n</tr>")
         rank = 0
-        highlightKey = [False, False, False, False, True, True, True, True, False, False]
-        mins = [0, 0, 0, 0, 40, 40, 40, -0.1, 0, 0]
-        maxs = [0, 0, 0, 0, 60, 70, 60, 0.1, 0, 0]
+        highlightKey = [False, False, False, False, True, False, True, True, True, False, False]
+        mins = [0, 0, 0, 0, 40, 0, 40, 40, -0.1, 0, 0]
+        maxs = [0, 0, 0, 0, 60, 0, 70, 60, 0.1, 0, 0]
         for b in bots:
             rank += 1
             if rank > lim:
@@ -332,11 +342,15 @@ def bot_details():
             ft.append(".gif\">")
             flagtag2 = "".join(ft)
 
+            bci = structures.pairing_ci(b)
+            bciStr = "n/a" if bci is None else "&plusmn;" + structures.fmt(bci)
+
             cells = [str(rank),
                      flagtag2,
                      botNameHref,
                      compareHref,
                      b.APS,
+                     bciStr,
                      b.NPP,
                      b.Survival,
                      b.KNNPBI,

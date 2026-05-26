@@ -2,6 +2,7 @@
 import datetime
 import json
 import logging
+import math
 import pickle
 import random
 import threading
@@ -197,8 +198,17 @@ def handle_queued_results():
 
     inv_ab = 1.0 / (aBattles + 1.0)
 
+    apaps_old = apair.APS
     apair.APS *= float(aBattles) * inv_ab
     apair.APS += APSa * inv_ab
+
+    delta_a = APSa - apaps_old
+    var_a_old = apair.__dict__.get("Var_APS", -1.0)
+    if var_a_old is None or var_a_old < 0:
+        var_a_old = 0.0
+    apair.Var_APS = (1.0 - inv_ab) * (var_a_old + inv_ab * delta_a * delta_a)
+    bpair.Var_APS = apair.Var_APS
+
     apair.__dict__["Min_APS"] = min(APSa, apair.__dict__.get("Min_APS", 100))
     bpair.APS = 100 - apair.APS
     bpair.__dict__["Min_APS"] = min(100 - APSa, bpair.__dict__.get("Min_APS", 100))
@@ -221,6 +231,8 @@ def handle_queued_results():
         pl = 0
         battles = 0
         alivePairings = 0
+        ci_var_sum = 0.0
+        ci_has_data = False
         if len(pairings) > 0:
             for p in pairings:
                 if p.Alive:
@@ -234,6 +246,13 @@ def handle_queued_results():
                     battles += p.Battles
                     alivePairings += 1
 
+                    pvar = p.__dict__.get("Var_APS", -1.0)
+                    if pvar is not None and pvar >= 0:
+                        n_eff = min(int(p.Battles), maxPerPair)
+                        if n_eff > 0:
+                            ci_var_sum += max(0.0, pvar) / n_eff
+                            ci_has_data = True
+
             if alivePairings > 0:
                 aps /= alivePairings
                 survival /= alivePairings
@@ -241,6 +260,10 @@ def handle_queued_results():
             b.Survival = survival
             b.PL = pl
             b.Battles = battles
+            if ci_has_data and alivePairings > 0:
+                b.APS_CI = 1.96 * math.sqrt(ci_var_sum / (alivePairings * alivePairings))
+            else:
+                b.APS_CI = -1.0
 
         b.PairingsList = db.Blob(zlib.compress(pickle.dumps(pairings, pickle.HIGHEST_PROTOCOL), 1))
         b.LastUpload = apair.LastUpload

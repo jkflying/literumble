@@ -46,6 +46,8 @@ def rankings():
         order = "Name"
     elif order == "Vote":
         order = "VoteScore"
+    elif order == "APS CI":
+        order = "APS_CI"
 
     parsing = time.time() - starttime
 
@@ -97,6 +99,7 @@ def rankings():
                     "\"flag\"",
                     "\"rank\"",
                     "\"APS\"",
+                    "\"APS_CI\"",
                     "\"PWIN\"",
                     "\"ANPP\"",
                     "\"vote\"",
@@ -104,7 +107,7 @@ def rankings():
                     "\"pairings\"",
                     "\"battles\"",
                     "\"latest\""]
-        escapes = ["\"", "\"", "", "", "", "", "", "", "", "", "\""]
+        escapes = ["\"", "\"", "", "", "", "", "", "", "", "", "", "\""]
         outs = ["[\n"]
         count = 0
         for bot in bots:
@@ -114,6 +117,7 @@ def rankings():
             cells = [
                 bot.Name, bot.Flag, count,
                 bot.APS,
+                getattr(bot, "APS_CI", -1.0),
                 bot.PWIN,
                 bot.ANPP,
                 bot.VoteScore,
@@ -140,6 +144,8 @@ def rankings():
         order = "Competitor"
     elif order == "VoteScore":
         order = "Vote"
+    elif order == "APS_CI":
+        order = "APS CI"
     out = []
 
     gameTitle = "RANKINGS - " + game.upper() + " WITH " + str(len(bots)) + " BOTS"
@@ -152,7 +158,7 @@ def rankings():
         out.append("<big>Rankings Not Stable</big>")
     out.append("\n<table>\n<tr>")
 
-    headings = ["", "Flag", "Competitor", "APS", "PWIN", "ANPP", "Vote", "Survival", "Pairings", "Battles", "Latest Battle"]
+    headings = ["", "Flag", "Competitor", "APS", "APS CI", "PWIN", "ANPP", "Vote", "Survival", "Pairings", "Battles", "Latest Battle"]
     for heading in headings:
         sortedBy = order == heading
         if order == heading and reverseSort:
@@ -195,8 +201,12 @@ def rankings():
         ft.append(".gif\">")
         flagtag = "".join(ft)
 
+        botCI = getattr(bot, "APS_CI", -1.0)
+        ciStr = "n/a" if (botCI is None or botCI < 0) else "&plusmn;" + structures.fmt(botCI)
+
         cells = [rank, flagtag, botNameHref,
                  bot.APS,
+                 ciStr,
                  bot.PWIN,
                  bot.ANPP,
                  bot.VoteScore,

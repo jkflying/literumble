@@ -256,6 +256,7 @@ def batch_rankings():
 
             botsdict = {}
 
+            maxPerPair = structures.rolling_battle_cap
             for i, b in enumerate(bots):
                 pairings = load_blob(b.PairingsList, [])
                 if not isinstance(pairings, list):
@@ -268,6 +269,9 @@ def batch_rankings():
 
                 aliveCount = 0
 
+                ci_var_sum = 0.0
+                ci_has_data = False
+
                 changed = False
                 for p in pairings:
                     j = botIndexes.get(p.Name, -1)
@@ -276,6 +280,13 @@ def batch_rankings():
                         changePotential = (p.KNNPBI == 0.0 and p.NPP == -1)
 
                         aliveCount += 1
+
+                        pvar = p.__dict__.get("Var_APS", -1.0)
+                        if pvar is not None and pvar >= 0:
+                            n_eff = min(int(p.Battles), maxPerPair)
+                            if n_eff > 0:
+                                ci_var_sum += max(0.0, pvar) / n_eff
+                                ci_has_data = True
                         p.KNNPBI = float(KNN_PBI[j, i])
                         p.NPP = float(NPPs[j, i])
 
@@ -308,6 +319,11 @@ def batch_rankings():
                     b.APS = float(totalAPS / apsCount)
                 else:
                     b.APS = -1.0
+
+                if ci_has_data and aliveCount > 0:
+                    b.APS_CI = 1.96 * math.sqrt(ci_var_sum / (aliveCount * aliveCount))
+                else:
+                    b.APS_CI = -1.0
 
                 b.PairingsList = zlib.compress(pickle.dumps(pairings, -1), 1)
                 b.Pairings = aliveCount

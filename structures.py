@@ -2,6 +2,7 @@
 import datetime
 import json
 import logging
+import math
 import pickle
 import zlib
 
@@ -15,6 +16,23 @@ def fmt(v):
             return "nan"
         return "%.2f" % v
     return str(v)
+
+
+def pairing_ci(scoreset):
+    """Return the per-pairing 95% CI half-width on its APS, or ``None`` when no
+    spread data has accumulated yet.
+    """
+    rolling_battle_cap = 10000 // 2
+    var = getattr(scoreset, "Var_APS", -1.0)
+    if var is None or var < 0:
+        return None
+    try:
+        n_eff = min(int(scoreset.Battles), rolling_battle_cap)
+    except (TypeError, ValueError, AttributeError):
+        return None
+    if n_eff < 1:
+        return None
+    return 1.96 * math.sqrt(max(0.0, var) / n_eff)
 
 
 def load_blob(blob, default):
@@ -64,6 +82,7 @@ class ScoreSet:
         self.KNNPBI = 0
         self.NPP = -1
         self.Alive = True
+        self.Var_APS = -1.0
 
 class LiteBot:
     def __init__ (self, bot = None, loadDict = None):
@@ -79,6 +98,7 @@ class LiteBot:
             self.LastUpload = bot.LastUpload
             self.Active = bot.Active
             self.ANPP = bot.ANPP
+            self.APS_CI = getattr(bot, "APS_CI", -1.0)
             self.Uploaders = bot.__dict__.get("Uploaders",[])
 
         if loadDict is not None:
@@ -99,6 +119,7 @@ class CachedBotEntry:
         self.Active = bot.Active
         self.PairingsList = bot.PairingsList
         self.ANPP = bot.ANPP
+        self.APS_CI = getattr(bot, "APS_CI", -1.0)
         self.Uploaders = bot.__dict__.get("Uploaders",[])
 
 class BotEntry(db.Model):
@@ -116,6 +137,7 @@ class BotEntry(db.Model):
         self.Active = bot.Active
         self.PairingsList = bot.PairingsList
         self.ANPP = float(bot.ANPP)
+        self.APS_CI = float(getattr(bot, "APS_CI", -1.0))
         self.Uploaders = bot.__dict__.get("Uploaders",[])
 
     #NR = db.StringProperty() --> key_name
@@ -131,6 +153,7 @@ class BotEntry(db.Model):
     Active = db.BooleanProperty(indexed = False)
     PairingsList = db.BlobProperty(indexed = False)
     ANPP = db.FloatProperty(indexed = False, default = 0.0)
+    APS_CI = db.FloatProperty(indexed = False, default = -1.0)
     Uploaders = db.StringListProperty(indexed = False)
 
 
