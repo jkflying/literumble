@@ -38,12 +38,14 @@ def uploaded_results():
 
     now = datetime.datetime.now()
     battleTimeStr = results.get("time", None)
-    if battleTimeStr is not None:
-        battleTime = datetime.datetime.utcfromtimestamp(int(battleTimeStr) / 1e3)
-        logging.info("Uploaded battle run at " + str(battleTime))
-        if battleTime < now - datetime.timedelta(1):
-            logging.info("Old data uploaded, discarding " + bota_name + " vs " + botb_name + " fought at " + str(battleTime))
-            return "OK. ERROR: your uploaded data is more than 24 hours old!"
+    if battleTimeStr is None:
+        logging.info("No timestamp, discarding " + bota_name + " vs " + botb_name)
+        return "OK. ERROR: your uploaded data has no timestamp! Please update your RoboRumble client."
+    battleTime = datetime.datetime.utcfromtimestamp(int(battleTimeStr) / 1e3)
+    logging.info("Uploaded battle run at " + str(battleTime))
+    if battleTime < now - datetime.timedelta(1):
+        logging.info("Old data uploaded, discarding " + bota_name + " vs " + botb_name + " fought at " + str(battleTime))
+        return "OK. ERROR: your uploaded data is more than 24 hours old!"
 
     uploads_allowed = global_dict.get("uploads allowed", None)
     uploads_allowed_expired = global_dict.get("uploads allowed check time", None)

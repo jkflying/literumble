@@ -144,6 +144,13 @@ def handle_queued_results():
     survivala = 100.0 * survivala / game.Rounds
     survivalb = 100.0 * survivalb / game.Rounds
 
+    battleTimeStr = results.get("time", None)
+    if battleTimeStr is not None:
+        battleTime = datetime.datetime.utcfromtimestamp(int(battleTimeStr) / 1e3)
+        lastUploadStr = battleTime.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        lastUploadStr = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     for b, pairings in zip(bots, pairingsarray):
         if len(pairings) > 0:
             removes = []
@@ -175,6 +182,14 @@ def handle_queued_results():
     if bpair is None:
         bpair = structures.ScoreSet(name=bota)
         pairingsarray[1].append(bpair)
+
+    if (apair.Battles == 1
+            and battleTimeStr is not None
+            and apair.APS == APSa
+            and apair.Survival == survivala
+            and apair.LastUpload == lastUploadStr):
+        logging.info("Discarding duplicate battle: " + bota + " vs " + botb)
+        return "OK. Duplicate battle discarded."
 
     for b, pairings in zip(bots, pairingsarray):
         i = 0
@@ -222,7 +237,7 @@ def handle_queued_results():
     apair.Battles += 1
     bpair.Battles = apair.Battles
 
-    apair.LastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    apair.LastUpload = lastUploadStr
     bpair.LastUpload = apair.LastUpload
 
     for b, pairings in zip(bots, pairingsarray):
