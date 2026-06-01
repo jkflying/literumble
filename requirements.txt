@@ -1,4 +1,5 @@
 Flask==3.0.3
+Flask-Compress==1.15
 gunicorn==22.0.0
 appengine-python-standard==1.1.6
 numpy==1.26.4

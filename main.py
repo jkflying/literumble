@@ -1,4 +1,5 @@
-from flask import Flask
+from flask import Flask, abort, request
+from flask_compress import Compress
 from google.appengine.api import wrap_wsgi_app
 
 import _memcache_compat  # noqa: F401
@@ -17,6 +18,31 @@ from auth import require_admin, require_cron, require_task
 
 app = Flask(__name__)
 app.wsgi_app = wrap_wsgi_app(app.wsgi_app)
+
+Compress(app)
+
+BLOCKED_USER_AGENTS = (
+    "meta-externalagent",
+    "meta-externalfetcher",
+    "facebookexternalhit",
+    "gptbot",
+    "oai-searchbot",
+    "chatgpt-user",
+    "claudebot",
+    "anthropic-ai",
+    "ccbot",
+    "bytespider",
+    "amazonbot",
+    "petalbot",
+)
+
+
+@app.before_request
+def block_scrapers():
+    ua = (request.headers.get("User-Agent") or "").lower()
+    if any(bot in ua for bot in BLOCKED_USER_AGENTS):
+        abort(403)
+
 
 app.add_url_rule("/", view_func=RumbleSelect.rumble_select, methods=["GET"])
 app.add_url_rule("/RumbleSelect", view_func=RumbleSelect.rumble_select, methods=["GET"])
