@@ -208,10 +208,10 @@ def bot_compare():
     out.append("</td><td>")
     out.append("<img id='flag' src=\"/flags/" + botb.Flag + ".gif\">  " + botb.Flag)
 
-    out.append("</td><td rowspan=\"7\">")
-    out.append('<canvas id="diffAPS" width="170" height="170" title="APS Diff Distribution" style="border: black 1px solid;"></canvas>')
-    out.append("</td><td rowspan=\"7\">")
-    out.append('<canvas id="diffSurvival" width="170" height="170" title="Survival Diff Distribution" style="border: black 1px solid;"></canvas>')
+    out.append("</td><td rowspan=\"9\">")
+    out.append('<canvas id="diffAPS" width="231" height="231" style="border: black 1px solid;"></canvas>')
+    out.append("</td><td rowspan=\"9\">")
+    out.append('<canvas id="diffSurvival" width="231" height="231" style="border: black 1px solid;"></canvas>')
     out.append("</td></tr>")
 
     APSa = 0.0
@@ -387,7 +387,7 @@ def bot_compare():
     out.append("""<div id="tip" style="position:fixed;background:#ffe;border:1px solid #999;padding:1px 4px;font-size:12px;pointer-events:none;display:none"></div>
 <script>
 (function() {
-  var S = 169;
+  var S = 230;
   var tip = document.getElementById('tip');
   function draw(id, col, xcol, color) {
     var canvas = document.getElementById(id);
@@ -395,7 +395,7 @@ def bot_compare():
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, S + 1, S + 1);
     ctx.fillStyle = '#7f7f7f';
-    ctx.fillRect(0, 85, S + 1, 1);
+    ctx.fillRect(0, 115, S + 1, 1);
     var rows = document.querySelectorAll('table')[1].querySelectorAll('tr');
     var names = {};
     ctx.fillStyle = color;
@@ -407,7 +407,7 @@ def bot_compare():
       if (isNaN(d) || isNaN(ox)) continue;
       var px = Math.round(ox * 0.01 * S);
       var py = Math.max(0, Math.min(S, S - Math.round((d + 50) * 0.01 * S)));
-      ctx.fillRect(px, py, 1, 1);
+      ctx.beginPath(); ctx.arc(px, py, 1.5, 0, 6.283); ctx.fill();
       names[py * (S + 1) + px] = c[2].textContent;
     }
     canvas.onmousemove = function(e) {

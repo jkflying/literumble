@@ -229,9 +229,9 @@ def bot_details():
         .format(identifier=name.split(" ")[0].split(".")[-1], name=name)
     out.append("<tr>\n<th>Name</th>\n<td>\n" + wikiurl + "</td>\n<th>APS</th><th>Survival</th><th>KNNPBI</th></tr>")
     out.append("<tr>\n<th>Flag</th>\n<td>\n" + flagtag + "</td>")
-    out.append("<td rowspan=\"9\"><canvas id=\"distAPS\" width=\"231\" height=\"231\" title=\"APS Distribution\" style=\"border: black 1px solid;\"></canvas></td>")
-    out.append("<td rowspan=\"9\"><canvas id=\"distSurvival\" width=\"231\" height=\"231\" title=\"Survival Distribution\" style=\"border: black 1px solid;\"></canvas></td>")
-    out.append("<td rowspan=\"9\"><canvas id=\"distKNNPBI\" width=\"231\" height=\"231\" title=\"KNNPBI Distribution\" style=\"border: black 1px solid;\"></canvas></td>")
+    out.append("<td rowspan=\"11\"><canvas id=\"distAPS\" width=\"231\" height=\"231\" style=\"border: black 1px solid;\"></canvas></td>")
+    out.append("<td rowspan=\"11\"><canvas id=\"distSurvival\" width=\"231\" height=\"231\" style=\"border: black 1px solid;\"></canvas></td>")
+    out.append("<td rowspan=\"11\"><canvas id=\"distKNNPBI\" width=\"231\" height=\"231\" style=\"border: black 1px solid;\"></canvas></td>")
 
     enemyScores = load_blob(rumble.ParticipantsScores, {}) if rumble is not None else {}
     if not isinstance(enemyScores, dict):
@@ -372,7 +372,7 @@ def bot_details():
       if (isNaN(v) || isNaN(ox)) continue;
       var px = Math.round(ox * 0.01 * S);
       var py = Math.max(0, Math.min(S, S - Math.round((v + offset) * 0.01 * S)));
-      ctx.fillRect(px, py, 1, 1);
+      ctx.beginPath(); ctx.arc(px, py, 1.5, 0, 6.283); ctx.fill();
       names[py * (S + 1) + px] = c[2].textContent;
     }
     canvas.onmousemove = function(e) {

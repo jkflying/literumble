@@ -91,3 +91,7 @@ body.dark td.red {
 body.dark #distribution, body.dark #distribution2 {
 	border-color: #ddd;
 }
+body.dark #tip {
+	background: #333;
+	border-color: #666;
+}
