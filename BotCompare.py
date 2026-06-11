@@ -200,7 +200,7 @@ def bot_compare():
     out.append("</td><td>")
     out.append("<a href=\"BotDetails?game=" + game + "&amp;name=" + botbName.replace(" ", "%20") + extraArgs + "\">" + botbName + "</a>")
 
-    out.append("</td><th>Diff Distribution</th></tr>")
+    out.append("</td><th>APS Diff</th><th>Survival Diff</th></tr>")
 
     out.append("\n<tr><th>Flag</th>")
     out.append("\n<td>")
@@ -209,9 +209,9 @@ def bot_compare():
     out.append("<img id='flag' src=\"/flags/" + botb.Flag + ".gif\">  " + botb.Flag)
 
     out.append("</td><td rowspan=\"7\">")
-
-    out.append('<canvas id="diffDistribution" width="170" height="170" title="Red = APS Diff, Green = Survival Diff" style="border: black 1px solid;"></canvas>')
-
+    out.append('<canvas id="diffAPS" width="170" height="170" title="APS Diff Distribution" style="border: black 1px solid;"></canvas>')
+    out.append("</td><td rowspan=\"7\">")
+    out.append('<canvas id="diffSurvival" width="170" height="170" title="Survival Diff Distribution" style="border: black 1px solid;"></canvas>')
     out.append("</td></tr>")
 
     APSa = 0.0
@@ -302,7 +302,7 @@ def bot_compare():
 
     out.append("\n</table>\n<br>\n<table>\n<tr>")
 
-    out.append("\n<td colspan=\"3\"></td><th colspan=\"2\">" + botaName + "</th><th colspan=\"2\">" + botbName + "</th><td colspan=\"3\">")
+    out.append("\n<td colspan=\"3\"></td><th colspan=\"2\">" + botaName + "</th><th colspan=\"2\">" + botbName + "</th><td colspan=\"4\">")
     out.append("</td></tr><tr class=\"dim\">")
 
     headings = [
@@ -315,7 +315,8 @@ def bot_compare():
         "Survival (B)",
         "Diff APS",
         "Diff Survival",
-        "Opponent APS"
+        "Opponent APS",
+        "Opponent Survival"
     ]
     for heading in headings:
         headinglink = heading
@@ -334,9 +335,9 @@ def bot_compare():
 
     out.append("\n</tr>")
     rank = 1
-    highlightKey = [False, False, False, True, True, True, True, True, True, True]
-    mins = [0, 0, 0, 40, 40, 40, 40, -0.1, -5, 40]
-    maxs = [0, 0, 0, 60, 60, 60, 60, 0.1, 5, 60]
+    highlightKey = [False, False, False, True, True, True, True, True, True, True, True]
+    mins = [0, 0, 0, 40, 40, 40, 40, -0.1, -5, 40, 40]
+    maxs = [0, 0, 0, 60, 60, 60, 60, 0.1, 5, 60, 60]
     for cp in commonList:
         if rank > lim:
             break
@@ -355,6 +356,7 @@ def bot_compare():
             cp.Diff_APS,
             cp.Diff_Survival,
             cp.Opponent_APS,
+            cp.Opponent_Survival,
         ]
 
         out.append("\n<tr>")
@@ -382,30 +384,48 @@ def bot_compare():
         out.append("\n<br> retrieve: " + str(int(round(retrievetime * 1000))))
         out.append("\n<br> sort: " + str(int(round(sorttime * 1000))))
         out.append("\n<br> html generation: " + str(int(round(htmltime * 1000))))
-    out.append("""<script>
+    out.append("""<div id="tip" style="position:fixed;background:#ffe;border:1px solid #999;padding:1px 4px;font-size:12px;pointer-events:none;display:none"></div>
+<script>
 (function() {
-  var canvas = document.getElementById('diffDistribution');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
   var S = 169;
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, S + 1, S + 1);
-  ctx.fillStyle = '#7f7f7f';
-  ctx.fillRect(0, 85, S + 1, 1);
-  var rows = document.querySelectorAll('table')[1].querySelectorAll('tr');
-  for (var i = 2; i < rows.length; i++) {
-    var c = rows[i].querySelectorAll('td');
-    if (c.length < 10) continue;
-    var dA = parseFloat(c[7].textContent);
-    var dS = parseFloat(c[8].textContent);
-    var oA = parseFloat(c[9].textContent);
-    if (isNaN(dA) || isNaN(dS) || isNaN(oA)) continue;
-    var x = Math.round(oA * 0.01 * S);
-    ctx.fillStyle = 'rgba(204,37,41,0.4)';
-    ctx.fillRect(x, Math.max(0, Math.min(S, S - Math.round((dA + 50) * 0.01 * S))), 1, 1);
-    ctx.fillStyle = 'rgba(62,150,81,0.4)';
-    ctx.fillRect(x, Math.max(0, Math.min(S, S - Math.round((dS + 50) * 0.01 * S))), 1, 1);
+  var tip = document.getElementById('tip');
+  function draw(id, col, xcol, color) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, S + 1, S + 1);
+    ctx.fillStyle = '#7f7f7f';
+    ctx.fillRect(0, 85, S + 1, 1);
+    var rows = document.querySelectorAll('table')[1].querySelectorAll('tr');
+    var names = {};
+    ctx.fillStyle = color;
+    for (var i = 2; i < rows.length; i++) {
+      var c = rows[i].querySelectorAll('td');
+      if (c.length < 11) continue;
+      var d = parseFloat(c[col].textContent);
+      var ox = parseFloat(c[xcol].textContent);
+      if (isNaN(d) || isNaN(ox)) continue;
+      var px = Math.round(ox * 0.01 * S);
+      var py = Math.max(0, Math.min(S, S - Math.round((d + 50) * 0.01 * S)));
+      ctx.fillRect(px, py, 1, 1);
+      names[py * (S + 1) + px] = c[2].textContent;
+    }
+    canvas.onmousemove = function(e) {
+      var r = canvas.getBoundingClientRect();
+      var mx = Math.floor(e.clientX - r.left);
+      var my = Math.floor(e.clientY - r.top);
+      var best = '', bestD = 26;
+      for (var dy = -5; dy <= 5; dy++) for (var dx = -5; dx <= 5; dx++) {
+        var d = dx*dx + dy*dy;
+        if (d < bestD) { var n = names[(my+dy)*(S+1)+(mx+dx)]; if (n) { best = n; bestD = d; } }
+      }
+      if (best) { tip.textContent = best; tip.style.left = e.clientX + 12 + 'px'; tip.style.top = e.clientY + 2 + 'px'; tip.style.display = ''; }
+      else tip.style.display = 'none';
+    };
+    canvas.onmouseleave = function() { tip.style.display = 'none'; };
   }
+  draw('diffAPS', 7, 9, 'rgba(204,37,41,0.4)');
+  draw('diffSurvival', 8, 10, 'rgba(62,150,81,0.4)');
 })();
 </script>""")
     out.append("</body></html>")

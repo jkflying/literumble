@@ -73,6 +73,7 @@ class ComparePair:
         self.A_Var = getattr(bota, "Var_APS", -1.0)
         self.B_Var = getattr(botb, "Var_APS", -1.0)
         self.Opponent_APS = eScore.APS if eScore else float('nan')
+        self.Opponent_Survival = eScore.Survival if eScore else float('nan')
 
 class ScoreSet:
     def __init__ (self, name = "", aps = 0.0, min_aps = 100.0, survival = 0.0, battles = 0, lastUpload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
