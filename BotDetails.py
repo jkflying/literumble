@@ -1,12 +1,8 @@
 #!/usr/bin/env python
-import base64
 import datetime
-import io
 import time
 from operator import attrgetter
 
-import numpy
-from PIL import Image
 from flask import Response, request
 from google.appengine.api import memcache
 
@@ -231,53 +227,15 @@ def bot_details():
     out.append("<table>\n")
     wikiurl = "<a href=\"https://robowiki.net/wiki/{identifier}\">{name}</a>" \
         .format(identifier=name.split(" ")[0].split(".")[-1], name=name)
-    out.append("<tr>\n<th>Name</th>\n<td>\n" + wikiurl + "</td>\n<th>Score Distribution</th></tr>")
-    out.append("<tr>\n<th>Flag</th>\n<td>\n" + flagtag + "</td><td rowspan=\"9\">")
+    out.append("<tr>\n<th>Name</th>\n<td>\n" + wikiurl + "</td>\n<th>APS</th><th>Survival</th><th>KNNPBI</th></tr>")
+    out.append("<tr>\n<th>Flag</th>\n<td>\n" + flagtag + "</td>")
+    out.append("<td rowspan=\"9\"><canvas id=\"distAPS\" width=\"231\" height=\"231\" title=\"APS Distribution\" style=\"border: black 1px solid;\"></canvas></td>")
+    out.append("<td rowspan=\"9\"><canvas id=\"distSurvival\" width=\"231\" height=\"231\" title=\"Survival Distribution\" style=\"border: black 1px solid;\"></canvas></td>")
+    out.append("<td rowspan=\"9\"><canvas id=\"distKNNPBI\" width=\"231\" height=\"231\" title=\"KNNPBI Distribution\" style=\"border: black 1px solid;\"></canvas></td>")
 
     enemyScores = load_blob(rumble.ParticipantsScores, {}) if rumble is not None else {}
     if not isinstance(enemyScores, dict):
         enemyScores = {}
-
-    colorSurvival = numpy.array((62, 150, 81), dtype=numpy.uint32)
-    colorAPS = numpy.array((204, 37, 41), dtype=numpy.uint32)
-    colorKNPBI = numpy.array((57, 106, 177), dtype=numpy.uint32)
-
-    size = 230
-    a = numpy.zeros((size + 1, size + 1, 3), dtype=numpy.uint32)
-    counts = numpy.zeros((size + 1, size + 1), dtype=numpy.uint32)
-
-    for b in bots:
-        eScore = enemyScores.get(b.Name, None)
-        if eScore:
-            x = int(round(eScore.APS * 0.01 * size))
-            yAPS = max(0, min(size, size - int(round(b.APS * 0.01 * size))))
-            a[yAPS, x, :] += colorAPS
-            counts[yAPS, x] += 1
-
-            ySurvival = max(0, min(size, size - int(round(b.Survival * 0.01 * size))))
-            a[ySurvival, x, :] += colorSurvival
-            counts[ySurvival, x] += 1
-
-            yKNNPBI = max(0, min(size, size - int(round((b.KNNPBI + 50) * 0.01 * size))))
-            a[yKNNPBI, x, :] += colorKNPBI
-            counts[yKNNPBI, x] += 1
-
-    a[counts == 0, :] = 255
-    setVals = counts > 1
-    for i in range(3):
-        a[setVals, i] = a[setVals, i] // counts[setVals]
-    midHeight = size - int(round(.5 * size))
-    a[midHeight, counts[midHeight, :] == 0, :] = 127
-
-    b_img = Image.fromarray(a.astype("uint8"), "RGB")
-    c = io.BytesIO()
-    b_img.save(c, format="png")
-    d = c.getvalue()
-    c.close()
-    e = base64.b64encode(d).decode("ascii")
-    out.append('<img title=\"Red = APS, Green = Survival, Blue = APS vs (KNNPBI+50)\" style=\"border: black 1px solid;\" alt="score distibution" src="data:image/png;base64,')
-    out.append(e)
-    out.append("\">")
 
     out.append("</td></tr>")
     out.append("<tr>\n<th>APS</th>\n<td>\n" + structures.fmt(bot.APS) + "</td></tr>")
@@ -299,7 +257,7 @@ def bot_details():
     if dark:
         out.append("<input type=\"hidden\" name=\"theme\" value=\"dark\" />")
     out.append("<input type=\"submit\" value=\"Compare\" /></form>")
-    out.append("</td><td>Opponent APS (X) vs. Pairing (Y) </td></tr></table>")
+    out.append("</td></tr></table>")
 
     if lim > 0:
         out.append("\n<table>\n<tr>\n")
@@ -313,7 +271,9 @@ def bot_details():
                     "Survival",
                     "KNNPBI",
                     "Battles",
-                    "Latest Battle"]
+                    "Latest Battle",
+                    "Opponent APS",
+                    "Opponent Survival"]
 
         for heading in headings:
             sortedBy = (order == heading)
@@ -331,9 +291,9 @@ def bot_details():
                 out.append("\n<th>" + orderHref + "</th>")
         out.append("\n</tr>")
         rank = 0
-        highlightKey = [False, False, False, False, True, False, True, True, True, False, False]
-        mins = [0, 0, 0, 0, 40, 0, 40, 40, -0.1, 0, 0]
-        maxs = [0, 0, 0, 0, 60, 0, 70, 60, 0.1, 0, 0]
+        highlightKey = [False, False, False, False, True, False, True, True, True, False, False, True, True]
+        mins = [0, 0, 0, 0, 40, 0, 40, 40, -0.1, 0, 0, 40, 40]
+        maxs = [0, 0, 0, 0, 60, 0, 70, 60, 0.1, 0, 0, 60, 60]
         for b in bots:
             rank += 1
             if rank > lim:
@@ -351,6 +311,7 @@ def bot_details():
             bci = structures.pairing_ci(b)
             bciStr = "n/a" if bci is None else "&plusmn;" + structures.fmt(bci)
 
+            eScore = enemyScores.get(b.Name, None)
             cells = [str(rank),
                      flagtag2,
                      botNameHref,
@@ -361,7 +322,9 @@ def bot_details():
                      b.Survival,
                      b.KNNPBI,
                      b.Battles,
-                     b.LastUpload]
+                     b.LastUpload,
+                     eScore.APS if eScore else float('nan'),
+                     eScore.Survival if eScore else float('nan')]
 
             out.append("\n<tr>")
             for i, cell in enumerate(cells):
@@ -386,6 +349,51 @@ def bot_details():
         out.append("\n<br /> sort: " + str(int(round(sorttime * 1000))))
         out.append("\n<br /> html generation: " + str(int(round(htmltime * 1000))))
 
+    out.append("""<div id="tip" style="position:fixed;background:#ffe;border:1px solid #999;padding:1px 4px;font-size:12px;pointer-events:none;display:none"></div>
+<script>
+(function() {
+  var S = 230;
+  var tip = document.getElementById('tip');
+  function draw(id, col, xcol, color, offset) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, S + 1, S + 1);
+    ctx.fillStyle = '#7f7f7f';
+    ctx.fillRect(0, 115, S + 1, 1);
+    var rows = document.querySelectorAll('table')[1].querySelectorAll('tr');
+    var names = {};
+    ctx.fillStyle = color;
+    for (var i = 1; i < rows.length; i++) {
+      var c = rows[i].querySelectorAll('td');
+      if (c.length < 13) continue;
+      var v = parseFloat(c[col].textContent);
+      var ox = parseFloat(c[xcol].textContent);
+      if (isNaN(v) || isNaN(ox)) continue;
+      var px = Math.round(ox * 0.01 * S);
+      var py = Math.max(0, Math.min(S, S - Math.round((v + offset) * 0.01 * S)));
+      ctx.fillRect(px, py, 1, 1);
+      names[py * (S + 1) + px] = c[2].textContent;
+    }
+    canvas.onmousemove = function(e) {
+      var r = canvas.getBoundingClientRect();
+      var mx = Math.floor(e.clientX - r.left);
+      var my = Math.floor(e.clientY - r.top);
+      var best = '', bestD = 26;
+      for (var dy = -5; dy <= 5; dy++) for (var dx = -5; dx <= 5; dx++) {
+        var d = dx*dx + dy*dy;
+        if (d < bestD) { var n = names[(my+dy)*(S+1)+(mx+dx)]; if (n) { best = n; bestD = d; } }
+      }
+      if (best) { tip.textContent = best; tip.style.left = e.clientX + 12 + 'px'; tip.style.top = e.clientY + 2 + 'px'; tip.style.display = ''; }
+      else tip.style.display = 'none';
+    };
+    canvas.onmouseleave = function() { tip.style.display = 'none'; };
+  }
+  draw('distAPS', 4, 11, 'rgba(204,37,41,0.4)', 0);
+  draw('distSurvival', 7, 12, 'rgba(62,150,81,0.4)', 0);
+  draw('distKNNPBI', 8, 11, 'rgba(57,106,177,0.4)', 50);
+})();
+</script>""")
     out.append("</body></html>")
 
     return "".join(out)
