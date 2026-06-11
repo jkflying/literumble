@@ -1,13 +1,9 @@
 #!/usr/bin/env python
-import base64
-import io
 import logging
 import math
 import time
 from operator import attrgetter
 
-import numpy
-from PIL import Image
 from flask import request
 from google.appengine.api import memcache
 
@@ -214,40 +210,7 @@ def bot_compare():
 
     out.append("</td><td rowspan=\"7\">")
 
-    colorSurvival = numpy.array((62, 150, 81), dtype=numpy.uint32)
-    colorAPS = numpy.array((204, 37, 41), dtype=numpy.uint32)
-    size = 169
-    a = numpy.zeros((size + 1, size + 1, 3), dtype=numpy.uint32)
-
-    counts = numpy.zeros((size + 1, size + 1), dtype=numpy.uint32)
-    for cp in commonList:
-        eScore = enemyScores.get(cp.Name, None)
-        if eScore:
-            x = int(round(eScore.APS * 0.01 * size))
-            yAPS = max(0, min(size, size - int(round((cp.A_APS - cp.B_APS + 50) * 0.01 * size))))
-            a[yAPS, x, (0, 1, 2)] += colorAPS
-            counts[yAPS, x] += 1
-
-            ySurvival = [max(0, min(size, size - int(round((cp.A_Survival - cp.B_Survival + 50) * 0.01 * size))))]
-            a[ySurvival, x, (0, 1, 2)] += colorSurvival
-            counts[ySurvival, x] += 1
-    a[counts == 0, :] = 255
-    setVals = counts > 1
-    for i in range(3):
-        a[setVals, i] = a[setVals, i] // counts[setVals]
-
-    midHeight = size - int(round(.5 * size))
-    a[midHeight, counts[midHeight, :] == 0, :] = 127
-
-    b_img = Image.fromarray(a.astype("uint8"), "RGB")
-    c = io.BytesIO()
-    b_img.save(c, format="png")
-    d = c.getvalue()
-    c.close()
-    e = base64.b64encode(d).decode("ascii")
-    out.append('<img title=\"Red = APS Diff, Green = Survival Diff" style=\"border: black 1px solid;\" alt="score distibution" src="data:image/png;base64,')
-    out.append(e)
-    out.append("\">")
+    out.append('<canvas id="diffDistribution" width="170" height="170" title="Red = APS Diff, Green = Survival Diff" style="border: black 1px solid;"></canvas>')
 
     out.append("</td></tr>")
 
@@ -419,6 +382,32 @@ def bot_compare():
         out.append("\n<br> retrieve: " + str(int(round(retrievetime * 1000))))
         out.append("\n<br> sort: " + str(int(round(sorttime * 1000))))
         out.append("\n<br> html generation: " + str(int(round(htmltime * 1000))))
+    out.append("""<script>
+(function() {
+  var canvas = document.getElementById('diffDistribution');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var S = 169;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, S + 1, S + 1);
+  ctx.fillStyle = '#7f7f7f';
+  ctx.fillRect(0, 85, S + 1, 1);
+  var rows = document.querySelectorAll('table')[1].querySelectorAll('tr');
+  for (var i = 2; i < rows.length; i++) {
+    var c = rows[i].querySelectorAll('td');
+    if (c.length < 10) continue;
+    var dA = parseFloat(c[7].textContent);
+    var dS = parseFloat(c[8].textContent);
+    var oA = parseFloat(c[9].textContent);
+    if (isNaN(dA) || isNaN(dS) || isNaN(oA)) continue;
+    var x = Math.round(oA * 0.01 * S);
+    ctx.fillStyle = 'rgba(204,37,41,0.4)';
+    ctx.fillRect(x, Math.max(0, Math.min(S, S - Math.round((dA + 50) * 0.01 * S))), 1, 1);
+    ctx.fillStyle = 'rgba(62,150,81,0.4)';
+    ctx.fillRect(x, Math.max(0, Math.min(S, S - Math.round((dS + 50) * 0.01 * S))), 1, 1);
+  }
+})();
+</script>""")
     out.append("</body></html>")
 
     return "".join(out)
