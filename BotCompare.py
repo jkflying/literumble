@@ -384,7 +384,7 @@ def bot_compare():
         out.append("\n<br> retrieve: " + str(int(round(retrievetime * 1000))))
         out.append("\n<br> sort: " + str(int(round(sorttime * 1000))))
         out.append("\n<br> html generation: " + str(int(round(htmltime * 1000))))
-    out.append("""<div id="tip" style="position:fixed;background:#ffe;border:1px solid #999;padding:1px 4px;font-size:12px;pointer-events:none;display:none"></div>
+    out.append("""<div id="tip" style="position:fixed;padding:1px 4px;font-size:12px;pointer-events:none;display:none"></div>
 <script>
 (function() {
   var S = 230;
